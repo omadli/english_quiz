@@ -10,27 +10,27 @@ from .managers import CustomUserManager
 class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(
         null=False, blank=False, max_length=100,
-        verbose_name=_("Ism"),
-        help_text=_("Foydalanuvchi ismi"),
+        verbose_name=_("Name"),
+        help_text=_("User's first name"),
     )
     last_name = models.CharField(
         null=True, blank=True, default=None, max_length=100,
-        verbose_name=_("Familiya"),
-        help_text=_("Foydalanuvchi familiyasi"),
+        verbose_name=_("Surname"),
+        help_text=_("User's surname"),
     )
     phone_number = models.BigIntegerField(
         null=False, blank=False, unique=True,
-        verbose_name=_('Telefon raqam'),
-        help_text=_("998911234567 formatda kiriting."),
+        verbose_name=_('Phone number'),
+        help_text=_("Please enter `998911234567` format"),
         validators=[
             RegexValidator(
-                regex=r"^(\+?)998(90|91|93|94|95|97|98|99|33|88|77)[0-9]{7}$",
+                regex=r"^(\+?)998(90|91|93|94|95|97|98|99|33|88|77|20)[0-9]{7}$",
             ),
         ]
     )
     password = models.CharField(
         null=False, blank=False,
-        verbose_name=_("Parol"), max_length=128,
+        verbose_name=_("Password"), max_length=128,
     )
     
     is_staff = models.BooleanField(default=False)
