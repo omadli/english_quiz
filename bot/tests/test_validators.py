@@ -17,6 +17,8 @@ from bot.validators import parse_time, toggle_weekday
         ("abc", None),
         ("", None),
         ("7", None),
+        ("0²:00", None),
+        ("²:²", None),
     ],
 )
 def test_parse_time(text, expected):

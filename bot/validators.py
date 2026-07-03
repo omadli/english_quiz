@@ -7,7 +7,7 @@ def parse_time(text: str) -> datetime.time | None:
     if len(parts) != 2:
         return None
     hh, mm = parts
-    if not (hh.isdigit() and mm.isdigit()):
+    if not (hh.isdecimal() and mm.isdecimal()):
         return None
     hour, minute = int(hh), int(mm)
     if 0 <= hour <= 23 and 0 <= minute <= 59:
