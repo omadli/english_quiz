@@ -12,6 +12,9 @@ Python 3.13 · Django 6 · uv · PostgreSQL · Redis · Celery · django-unfold 
 # 1. Install deps (uv)
 python -m pip install --user uv
 uv sync
+# NOTE: if `uv` isn't on your PATH (common with `pip install --user`,
+# especially on Windows), prefix every `uv ...` command below with
+# `python -m`, e.g. `python -m uv sync`, `python -m uv run pytest`.
 
 # 2. Config
 cp .env.example .env
