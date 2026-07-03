@@ -77,3 +77,21 @@ def test_apply_wizard_data_sets_fields_and_onboards():
     assert profile.audio_repeat == 3
     assert profile.onboarded is True
     assert profile.current_book is not None
+
+
+def test_apply_wizard_data_does_not_reset_position_when_already_onboarded():
+    book = Book.objects.create(number=1, title="Book 1", slug="book-1")
+    Unit.objects.create(book=book, number=1)
+    _, profile, _ = get_or_create_user(
+        telegram_id=4, username="", first_name="A", last_name="", language_code=""
+    )
+    set_starting_position(profile)
+    profile.current_word_order = 5
+    profile.onboarded = True
+    profile.save()
+
+    apply_wizard_data(profile, {"words_per_session": 12})
+    profile.refresh_from_db()
+
+    assert profile.current_word_order == 5
+    assert profile.words_per_session == 12

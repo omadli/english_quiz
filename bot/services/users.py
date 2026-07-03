@@ -59,7 +59,12 @@ def set_starting_position(profile: LearningProfile) -> LearningProfile:
 
 
 def apply_wizard_data(profile: LearningProfile, data: dict) -> LearningProfile:
-    """Persist collected wizard settings, mark onboarded, and set the starting position."""
+    """Persist collected wizard settings, mark onboarded, and set the starting position.
+
+    The starting position is only (re)set the first time a profile is onboarded;
+    a later settings edit must not reset an in-progress learning position.
+    """
+    first_time = not profile.onboarded
     for key in (
         "words_per_session",
         "study_weekdays",
@@ -72,5 +77,6 @@ def apply_wizard_data(profile: LearningProfile, data: dict) -> LearningProfile:
             setattr(profile, key, data[key])
     profile.onboarded = True
     profile.save()
-    set_starting_position(profile)
+    if first_time:
+        set_starting_position(profile)
     return profile

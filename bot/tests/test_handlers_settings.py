@@ -1,15 +1,12 @@
 import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.handlers import settings as st
 from bot.states.onboarding import OnboardingStates
-
-pytestmark = pytest.mark.asyncio
 
 
 def _state():
@@ -39,5 +36,20 @@ async def test_edit_words_enters_words_state():
     callback = AsyncMock()
     callback.data = "set:words"
     state = _state()
-    await st.edit_words(callback, state)
+    await st.edit_words(callback, state, profile=_profile())
     assert await state.get_state() == OnboardingStates.words.state
+    assert (await state.get_data())["words_per_session"] == 10
+
+
+async def test_edit_audio_seeds_all_fields():
+    callback = AsyncMock()
+    callback.data = "set:audio"
+    state = _state()
+    await st.edit_audio(callback, state, profile=_profile())
+    data = await state.get_data()
+    assert data["words_per_session"] == 10
+    assert data["study_weekdays"] == [0, 1, 2]
+    assert data["morning_time"] == datetime.time(7, 0)
+    assert data["exam_time"] == datetime.time(20, 0)
+    assert data["audio_enabled"] is True
+    assert data["audio_repeat"] == 2

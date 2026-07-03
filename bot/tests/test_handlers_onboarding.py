@@ -1,15 +1,12 @@
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.handlers import onboarding as ob
 from bot.states.onboarding import OnboardingStates
-
-pytestmark = pytest.mark.asyncio
 
 
 def _state():
