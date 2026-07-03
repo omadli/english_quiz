@@ -24,7 +24,7 @@ Loyihaning texnik poydevorini zamonaviylashtirish va mustahkam ma'lumot/media as
 | Qatlam | Tanlov | Izoh |
 |--------|--------|------|
 | Til | Python 3.12 | |
-| Framework | Django 5.2 LTS | Uzoq muddat qo'llab-quvvatlanadi; unfold/celery ekotizimi mos |
+| Framework | **Django 6.0** | Async-first: to'liqroq async ORM (bot ORM'ni async ishlatadi), async view'lar. Python 3.12+ talab qiladi |
 | Dep manager | **uv** + `pyproject.toml` + `uv.lock` | Tez, zamonaviy |
 | DB | PostgreSQL 16 | |
 | Cache/broker/FSM | Redis 7 | Celery broker+result, keyingi fazalarda bot FSM va cache |
@@ -223,5 +223,5 @@ Maqsad: asosiy mantiqni qamrab olish, 100% emas.
 ## 12. Ochiq savollar / xavflar
 
 - **Masofaviy audio URL namunasi** import paytida tasdiqlanadi (`sound` → mp3 to'liq yo'li). Agar tuzilma boshqacha bo'lsa, importer moslashtiriladi; gTTS fallback kafolat beradi.
-- **Django 5.2 vs 6.x:** LTS (5.2) barqarorlik uchun tanlandi; kerak bo'lsa keyin yangilanadi.
+- **Django 6.0** tanlandi (async ehtiyoji — bot ORM'ni async ishlatadi). `django-unfold`, `django-celery-beat` va boshqa kutubxonalarning Django 6.0 mosligi import paytida tasdiqlanadi (barchasi 6.0'ni qo'llab-quvvatlaydi).
 - **Web login (6 xonali kod) va rollar** — Faza 1/4/5, lekin User sxemasi hozir tayyorlanadi.

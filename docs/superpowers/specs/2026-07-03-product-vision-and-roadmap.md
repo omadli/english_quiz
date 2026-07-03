@@ -85,6 +85,6 @@ So'z-tarjima moslashtirish, xotira o'yini, so'z yozish/terish, tezlik o'yini, va
 
 ## 6. Umumiy texnologiya to'plami
 
-Python 3.12 · Django 5.2 LTS · aiogram 3.x · PostgreSQL 16 · Redis 7 · Celery 5 + Beat · django-unfold · Django + HTMX + Tailwind (web) · uv · Docker Compose · pytest · ruff.
+Python 3.12 · Django 6.0 (async-first) · aiogram 3.x · PostgreSQL 16 · Redis 7 · Celery 5 + Beat · django-unfold · Django + HTMX + Tailwind (web) · uv · Docker Compose · pytest · ruff.
 
 **Bot↔Django:** monorepo, umumiy Django ORM (bot uchun alohida API shart emas). Web app ham Django. Kelajakda mobil kerak bo'lsa DRF/Ninja API qo'shiladi.
