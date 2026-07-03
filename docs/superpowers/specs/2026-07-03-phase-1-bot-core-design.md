@@ -27,7 +27,7 @@ Faza oxirida:
 | Mavzu | Qaror |
 |-------|-------|
 | Bot framework | **aiogram 3.x** (Faza 0'da `pyproject`' da e'lon qilingan) |
-| Django integratsiya | Bot alohida jarayon; `django.setup()` chaqiradi va **Django async ORM** (`aget`/`acreate`/`aupdate_or_create`/`async for`) ni to'g'ridan-to'g'ri ishlatadi. Alohida API yo'q. |
+| Django integratsiya | Bot alohida jarayon; `django.setup()` chaqiradi va **Django ORM**'ni to'g'ridan-to'g'ri ishlatadi (alohida API yo'q). Service qatlami **sync** ORM funksiyalari; handler/middleware ularni `asgiref.sync.sync_to_async` bilan chaqiradi. *(Sabab: native async ORM test-tranzaksiya va bog'liq-obyekt kirishida nozik; sync + `sync_to_async` ishonchli va oson testlanadi.)* |
 | FSM storage | **aiogram `RedisStorage`** (Redis DB 2 — cache DB1/celery DB0'dan ajratilgan) |
 | Ulanish | **Long polling** (`dp.start_polling`) — Docker'da public URL kerak emas. Webhook keyingi (prod) uchun qoldiriladi. |
 | Til | O'zbekcha; barcha matn `bot/strings.py` da (i18n-ready, keyin `aiogram.utils.i18n`) |
@@ -109,10 +109,11 @@ bot/
 4. Routerlarni ulash (start, onboarding, settings, common), UserMiddleware'ni ulash.
 5. `await dp.start_polling(bot)`.
 
-### Service qatlami (`bot/services/users.py`)
-- `async def get_or_create_user(tg_user) -> tuple[User, LearningProfile, bool]` — telegram_id bo'yicha `TelegramAccount`'ni topadi yoki `User`+`TelegramAccount`+`LearningProfile` yaratadi (idempotent). `created` qaytaradi. TG profil ma'lumotlarini (username, first/last name, language_code) yangilaydi.
-- `async def update_profile(profile, **fields)` — sozlamalarni saqlash.
-- `async def set_starting_position(profile)` — `current_book`=birinchi faol Book, `current_unit`=uning birinchi unit'i, `current_word_order`=0.
+### Service qatlami (`bot/services/users.py`) — **sync** funksiyalar (handler `sync_to_async` bilan chaqiradi)
+- `get_or_create_user(telegram_id, username, first_name, last_name, language_code) -> tuple[User, LearningProfile, bool]` — telegram_id bo'yicha `TelegramAccount`'ni topadi yoki `User`+`TelegramAccount`+`LearningProfile` yaratadi (idempotent). `created` qaytaradi. TG profil ma'lumotlarini yangilaydi. (Oddiy argumentlar — aiogram tiplariga bog'liq emas, oson testlanadi.)
+- `update_profile(profile, **fields)` — sozlamalarni saqlash.
+- `set_starting_position(profile)` — `current_book`=birinchi faol Book, `current_unit`=uning birinchi unit'i, `current_word_order`=0.
+- `apply_wizard_data(profile, data: dict)` — sehrgar to'plagan ma'lumotni profil maydonlariga o'giradi va saqlaydi (onboarded=True + starting position).
 
 ---
 
