@@ -97,6 +97,9 @@ CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL)
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# Redis (bot FSM storage; see bot.config.get_fsm_redis_url)
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/1")
+
 # Pluggable TTS
 TTS_PROVIDER = env("TTS_PROVIDER", default="apps.common.tts.GTTSProvider")
 
