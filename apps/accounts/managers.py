@@ -1,6 +1,5 @@
-from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
+from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import gettext_lazy as _
-from typing import Union
 
 
 class CustomUserManager(BaseUserManager):
@@ -17,7 +16,7 @@ class CustomUserManager(BaseUserManager):
         if not first_name:
             raise ValueError(_('Ism kiritish majburiy!'))
         phone_number = self.normalize_phone(phone_number)
-        user: AbstractBaseUser = self.model(first_name=first_name, phone_number=phone_number, **extra_fields)  # noqa: E501
+        user = self.model(first_name=first_name, phone_number=phone_number, **extra_fields)
         user.set_password(password)
         user.save()
         return user
@@ -36,7 +35,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError(_('Superuser must have is_superuser=True.'))
         return self.create_user(first_name, phone_number, password, **extra_fields)
 
-    def normalize_phone(self, phone_number: Union[str, int]):
+    def normalize_phone(self, phone_number: str | int):
         if isinstance(phone_number, int):
             phone_number = str(phone_number)
         
