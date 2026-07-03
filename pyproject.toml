@@ -25,6 +25,7 @@ dev = [
     "pytest>=8.3",
     "pytest-django>=4.9",
     "pytest-cov>=6.0",
+    "pytest-asyncio>=0.24",
     "factory-boy>=3.3",
     "ruff>=0.9",
     "pre-commit>=4.0",
@@ -42,6 +43,7 @@ select = ["E", "F", "I", "UP", "B", "DJ"]
 DJANGO_SETTINGS_MODULE = "config.settings.dev"
 python_files = ["test_*.py", "tests.py"]
 addopts = "-ra"
+asyncio_mode = "auto"
 
 [tool.uv]
 package = false
