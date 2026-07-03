@@ -36,6 +36,19 @@ uv run python manage.py runserver
 
 Admin: http://localhost:8000/admin/
 
+## Bot (Telegram)
+
+Set `BOT_TOKEN` in `.env` (get one from @BotFather), then:
+
+```bash
+docker compose up -d db redis
+python -m uv run python manage.py migrate
+python -m uv run python -m bot          # long-polling bot
+```
+
+Send `/start` to your bot to register and run onboarding; `/settings` to edit.
+Full stack (bot in Docker): `docker compose up --build bot`.
+
 ## Full stack (Docker)
 
 ```bash

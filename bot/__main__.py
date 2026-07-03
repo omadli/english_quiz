@@ -1,17 +1,22 @@
-"""Placeholder bot process for Phase 0.
+import asyncio
+import logging
+import os
 
-Phase 1 replaces this with the aiogram dispatcher. For now it only
-verifies the container builds and stays running.
-"""
+import django
 
-import time
+logging.basicConfig(level=logging.INFO)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
+django.setup()
 
 
-def main() -> None:
-    print("bot stub: Phase 0 placeholder — aiogram wiring lands in Phase 1", flush=True)
-    while True:
-        time.sleep(3600)
+async def main() -> None:
+    from bot.factory import build_bot, build_dispatcher
+
+    bot = build_bot()
+    dp = build_dispatcher()
+    logging.getLogger("bot").info("Bot started (long polling)")
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
