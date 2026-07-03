@@ -1,74 +1,97 @@
 from __future__ import annotations
+
+import re
+
 from django.db import models
-from django.utils.translation import gettext as _
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils.translation import gettext_lazy as _
 
-from .utils import speach
+from apps.common.models import TimeStampedModel
+
+_PRON_RE = re.compile(r"^\s*(\[[^\]]*\])?\s*(.*?)\s*$")
 
 
-def upload_word_image(instance: Word, filename):
-    ext = filename.split('.')[-1]
-    
-    # file will be uploaded to MEDIA_ROOT / images / words / <book_number> / <unit_number> / <word_number>  # noqa: E501
-    return 'images/words/{0}/{1}/{2}.{3}'.format(instance.book, instance.unit, instance.en, ext)  # noqa: E501
+def parse_pronunciation(raw: str | None) -> tuple[str, str]:
+    """Split e.g. '[əˈfreid] adj.' into ('[əˈfreid]', 'adj.')."""
+    if not raw:
+        return ("", "")
+    match = _PRON_RE.match(raw)
+    if not match:
+        return ("", raw.strip())
+    ipa = (match.group(1) or "").strip()
+    pos = (match.group(2) or "").strip()
+    return (ipa, pos)
 
-class Word(models.Model):
-    id = models.AutoField(null=False, primary_key=True)
-    book = models.PositiveSmallIntegerField(
-        null=False, blank=False, help_text=_("Kitob raqami"),
-        validators=[
-            MinValueValidator(1),
-            MaxValueValidator(6)
-        ]
-    )
-    
-    unit = models.PositiveSmallIntegerField(
-        null=False, blank=False, help_text=_("Unit raqami"),
-        validators=[
-            MinValueValidator(1),
-            MaxValueValidator(30)
-        ]
-    )
-    
-    en = models.CharField(
-        max_length=100, null=False,
-        verbose_name="english",
-        db_column='en',
-        help_text="Inglizchasi",
-    )
-    uz = models.CharField(
-        max_length=100, null=False, db_column='uz',
-        verbose_name="uzbek",
-        help_text=_("O'zbekcha tarjimasi"),
-    )
-    definition = models.TextField(
-        null=True, blank=True,
-        help_text=_("Ta'rifi"),
-    )
-    example = models.TextField(
-        null=True, blank=True,
-        help_text=_("Namuna"),
-    )
-    pronunciation = models.CharField(
-        null=True, blank=True, max_length=100,
-        help_text=_("Talaffuzi")
-    )
-    
-    image = models.ImageField(
-        null=True, blank=True,
-        upload_to=upload_word_image
-    )
 
-    def voice(self, slow: bool = False):
-        return speach(self.en, slow)
-    
-    
-    def __str__(self) -> str:
-        return self.en + " - " + self.uz
-    
+class Book(TimeStampedModel):
+    number = models.PositiveSmallIntegerField(unique=True, verbose_name=_("Number"))
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    level = models.CharField(max_length=8, blank=True)
+    cover = models.ImageField(upload_to="images/books/covers/", blank=True, null=True)
+    pdf = models.FileField(upload_to="books/pdf/", blank=True, null=True)
+    word_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
     class Meta:
-        ordering = ("id", )
-        # unique_together = ('book', 'unit', 'en')
-        constraints = [
-            models.UniqueConstraint(fields=["book", "en"], name='book and word'),   # noqa: E501
-        ]
+        ordering = ("number",)
+        verbose_name = _("Book")
+        verbose_name_plural = _("Books")
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Unit(TimeStampedModel):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="units")
+    number = models.PositiveSmallIntegerField()
+    title = models.CharField(max_length=200, blank=True)
+    slug = models.SlugField(max_length=200, blank=True)
+    word_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("book", "number")
+        constraints = [models.UniqueConstraint(fields=["book", "number"], name="uniq_book_unit")]
+        verbose_name = _("Unit")
+        verbose_name_plural = _("Units")
+
+    def __str__(self) -> str:
+        return f"{self.book.title} — Unit {self.number}"
+
+
+def word_image_upload_to(instance: "Word", filename: str) -> str:
+    ext = filename.rsplit(".", 1)[-1]
+    return f"images/words/{instance.unit.book.number}/{instance.unit.number}/{instance.en}.{ext}"
+
+
+def word_audio_upload_to(instance: "Word", filename: str) -> str:
+    ext = filename.rsplit(".", 1)[-1]
+    return f"audio/words/{instance.unit.book.number}/{instance.unit.number}/{instance.en}.{ext}"
+
+
+class Word(TimeStampedModel):
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name="words")
+    order = models.PositiveSmallIntegerField(default=0)
+    en = models.CharField(max_length=100, verbose_name=_("English"))
+    uz = models.CharField(max_length=255, verbose_name=_("Uzbek"))
+    part_of_speech = models.CharField(max_length=20, blank=True)
+    pronunciation = models.CharField(max_length=100, blank=True)
+    definition = models.TextField(blank=True)
+    example = models.TextField(blank=True)
+    image = models.ImageField(upload_to=word_image_upload_to, blank=True, null=True)
+    audio_en = models.FileField(upload_to=word_audio_upload_to, blank=True, null=True)
+    audio_uz = models.FileField(upload_to=word_audio_upload_to, blank=True, null=True)
+
+    class Meta:
+        ordering = ("unit", "order")
+        constraints = [models.UniqueConstraint(fields=["unit", "en"], name="uniq_unit_word")]
+        indexes = [models.Index(fields=["en"])]
+        verbose_name = _("Word")
+        verbose_name_plural = _("Words")
+
+    @property
+    def book(self) -> Book:
+        return self.unit.book
+
+    def __str__(self) -> str:
+        return f"{self.en} — {self.uz}"
