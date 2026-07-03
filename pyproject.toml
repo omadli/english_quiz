@@ -1,0 +1,47 @@
+[project]
+name = "english-quiz"
+version = "0.1.0"
+description = "4000 Essential Words — Telegram bot + web app"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=6.0,<6.1",
+    "django-environ>=0.11",
+    "django-unfold>=0.43",
+    "psycopg[binary]>=3.2",
+    "redis>=5.2",
+    "celery[redis]>=5.4",
+    "django-celery-beat>=2.7",
+    "pillow>=11.0",
+    "gtts>=2.5",
+    "requests>=2.32",
+    "whitenoise>=6.8",
+    "gunicorn>=23.0",
+    "uvicorn>=0.34",
+    "aiogram>=3.15",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "pytest-cov>=6.0",
+    "factory-boy>=3.3",
+    "ruff>=0.9",
+    "pre-commit>=4.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["test_*.py", "tests.py"]
+addopts = "-ra"
+
+[tool.uv]
+package = false
