@@ -59,12 +59,12 @@ class Unit(TimeStampedModel):
         return f"{self.book.title} — Unit {self.number}"
 
 
-def word_image_upload_to(instance: "Word", filename: str) -> str:
+def word_image_upload_to(instance: Word, filename: str) -> str:
     ext = filename.rsplit(".", 1)[-1]
     return f"images/words/{instance.unit.book.number}/{instance.unit.number}/{instance.en}.{ext}"
 
 
-def word_audio_upload_to(instance: "Word", filename: str) -> str:
+def word_audio_upload_to(instance: Word, filename: str) -> str:
     ext = filename.rsplit(".", 1)[-1]
     return f"audio/words/{instance.unit.book.number}/{instance.unit.number}/{instance.en}.{ext}"
 

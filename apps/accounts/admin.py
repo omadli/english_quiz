@@ -20,10 +20,19 @@ class UserAdmin(DjangoUserAdmin, ModelAdmin):
     ordering = ("id",)
     fieldsets = (
         (None, {"fields": ("first_name", "last_name", "phone_number", "password")}),
-        ("Permissions", {"fields": ("is_staff", "is_superuser", "is_active", "groups", "user_permissions")}),
+        (
+            "Permissions",
+            {"fields": ("is_staff", "is_superuser", "is_active", "groups", "user_permissions")},
+        ),
     )
     add_fieldsets = (
-        (None, {"classes": ("wide",), "fields": ("first_name", "phone_number", "password1", "password2")}),
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": ("first_name", "phone_number", "password1", "password2"),
+            },
+        ),
     )
 
 

@@ -69,5 +69,17 @@ services:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
 
+  bot:
+    build: .
+    command: python -m bot
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/english_quiz
+      REDIS_URL: redis://redis:6379/1
+      RUN_MIGRATIONS: "0"
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
 volumes:
   pgdata:

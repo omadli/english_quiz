@@ -43,5 +43,7 @@ class WordAdmin(ModelAdmin):
     @admin.display(description="image")
     def thumb(self, obj):
         if obj.image:
-            return format_html('<img src="{}" style="height:36px;border-radius:4px" />', obj.image.url)
+            return format_html(
+                '<img src="{}" style="height:36px;border-radius:4px" />', obj.image.url
+            )
         return "—"

@@ -9,7 +9,9 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def admin_client(client):
-    user = User.objects.create(first_name="Admin", phone_number=998900000000, is_staff=True, is_superuser=True)
+    user = User.objects.create(
+        first_name="Admin", phone_number=998900000000, is_staff=True, is_superuser=True
+    )
     user.set_password("pw")
     user.save()
     client.force_login(user)
