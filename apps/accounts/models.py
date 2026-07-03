@@ -39,6 +39,21 @@ class User(AbstractBaseUser, PermissionsMixin):
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}".strip()
 
+    def get_full_name(self) -> str:
+        return self.full_name
+
+    def get_short_name(self) -> str:
+        return self.first_name
+
+    def get_username(self) -> str:
+        # USERNAME_FIELD is phone_number (BigIntegerField). AbstractBaseUser's
+        # default get_username() returns that raw int, which breaks any code
+        # (e.g. django-unfold's avatar template) that expects a string it can
+        # slice/index. Stringify it here; auth itself queries USERNAME_FIELD
+        # directly and doesn't go through this method.
+        value = getattr(self, self.USERNAME_FIELD)
+        return str(value) if value is not None else ""
+
     def __str__(self) -> str:
         if self.phone_number:
             return f"{self.full_name} +{self.phone_number}"

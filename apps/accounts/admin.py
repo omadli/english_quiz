@@ -1,33 +1,34 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group
+from unfold.admin import ModelAdmin
+from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from .forms import CustomUserCreationForm, CustomUserChangeForm
-from .models import User
+from .models import TelegramAccount, User
 
-
-# admin.site.unregister(User)
 admin.site.unregister(Group)
 
-# @admin.register(User)
-class CustomUserAdmin(UserAdmin):
-    add_form = CustomUserCreationForm
-    form = CustomUserChangeForm
-    model = User
-    list_display = ('first_name', 'last_name', 'phone_number', 'is_superuser', 'is_staff', 'is_active', 'date_joined')  # noqa: E501
-    list_filter = ('is_staff', 'is_active', 'date_joined')
+
+@admin.register(User)
+class UserAdmin(DjangoUserAdmin, ModelAdmin):
+    add_form = UserCreationForm
+    form = UserChangeForm
+    change_password_form = AdminPasswordChangeForm
+    list_display = ("__str__", "first_name", "last_name", "phone_number", "is_staff", "is_active")
+    list_filter = ("is_staff", "is_active")
+    search_fields = ("first_name", "last_name", "phone_number")
+    ordering = ("id",)
     fieldsets = (
-        (None, {'fields': ('first_name', 'last_name', 'phone_number', 'password')}),
-        ('Permissions', {'fields': ('is_staff', 'is_active')}),
+        (None, {"fields": ("first_name", "last_name", "phone_number", "password")}),
+        ("Permissions", {"fields": ("is_staff", "is_superuser", "is_active", "groups", "user_permissions")}),
     )
     add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('first_name', 'last_name', 'phone_number', 'password1', 'password2', 'is_staff', 'is_superuser')}  # noqa: E501
-        ),
+        (None, {"classes": ("wide",), "fields": ("first_name", "phone_number", "password1", "password2")}),
     )
-    search_fields = ('phone_number__contains', 'first_name__icontains', 'last_name__icontains')  # noqa: E501
-    ordering = ('id',)
 
 
-admin.site.register(User, CustomUserAdmin)
+@admin.register(TelegramAccount)
+class TelegramAccountAdmin(ModelAdmin):
+    list_display = ("telegram_id", "username", "user", "blocked_bot")
+    search_fields = ("telegram_id", "username")
+    raw_id_fields = ("user",)
