@@ -40,3 +40,17 @@ def test_setup_registers_guardian_report_crontab():
     # idempotent
     call_command("setup_periodic_tasks")
     assert PeriodicTask.objects.filter(name="dispatch_guardian_reports").count() == 1
+
+
+def test_setup_registers_nudge_tasks():
+    from django_celery_beat.models import PeriodicTask
+
+    call_command("setup_periodic_tasks")
+    for name in ("dispatch_study_nudges", "dispatch_pre_exam_nudges", "dispatch_practice_polls"):
+        assert PeriodicTask.objects.filter(name=name).count() == 1
+    # existing tasks intact
+    assert PeriodicTask.objects.filter(name="dispatch_morning_deliveries").exists()
+    assert PeriodicTask.objects.filter(name="dispatch_guardian_reports").exists()
+    # idempotent
+    call_command("setup_periodic_tasks")
+    assert PeriodicTask.objects.filter(name="dispatch_study_nudges").count() == 1

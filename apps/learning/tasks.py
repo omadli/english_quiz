@@ -6,9 +6,20 @@ from django.utils import timezone
 
 from apps.learning.models import DailySession, LearningProfile
 from apps.learning.services.deliver import run_delivery
+from apps.learning.services.exam import build_questions
 from apps.learning.services.exam_deliver import run_exam
+from apps.learning.services.nudges import (
+    active_practice_learners,
+    due_pre_exam_nudges,
+    due_study_nudges,
+    mark_pre_exam_nudged,
+    mark_study_nudged,
+    pick_practice_word,
+)
 from apps.learning.services.report import finalize_exam
 from apps.learning.services.scheduling import is_due_for_delivery, is_due_for_exam
+from bot import strings
+from bot.sender import send_daily, send_quiz_poll
 
 
 @shared_task
@@ -47,3 +58,52 @@ def finalize_due_exams() -> None:
     ).select_related("user__telegram")
     for session in sessions.iterator():
         finalize_exam(session)
+
+
+def _send_text(telegram_id: int, text: str) -> None:
+    send_daily(telegram_id, None, [{"caption": text, "image": None, "audio": None}])
+
+
+@shared_task
+def dispatch_study_nudges() -> None:
+    for session in due_study_nudges(timezone.localdate()):
+        account = getattr(session.user, "telegram", None)
+        if account is None or account.blocked_bot:
+            continue
+        try:
+            _send_text(account.telegram_id, strings.NUDGE_STUDY)
+        except Exception:  # best-effort
+            pass
+        mark_study_nudged(session)
+
+
+@shared_task
+def dispatch_pre_exam_nudges() -> None:
+    for session in due_pre_exam_nudges(timezone.now()):
+        account = getattr(session.user, "telegram", None)
+        if account is None or account.blocked_bot:
+            continue
+        try:
+            _send_text(account.telegram_id, strings.NUDGE_PRE_EXAM)
+        except Exception:  # best-effort
+            pass
+        mark_pre_exam_nudged(session)
+
+
+@shared_task
+def dispatch_practice_polls() -> None:
+    for learner in active_practice_learners():
+        account = getattr(learner, "telegram", None)
+        if account is None or account.blocked_bot:
+            continue
+        word = pick_practice_word(learner)
+        if word is None:
+            continue
+        q = build_questions([word])[0]
+        try:
+            send_quiz_poll(
+                account.telegram_id, q["prompt"], q["options"], q["correct_option"],
+                q["explanation"], is_anonymous=True,
+            )
+        except Exception:  # best-effort
+            pass
