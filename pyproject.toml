@@ -18,6 +18,7 @@ dependencies = [
     "gunicorn>=23.0",
     "uvicorn>=0.34",
     "aiogram>=3.15",
+    "pydub>=0.25",
 ]
 
 [dependency-groups]

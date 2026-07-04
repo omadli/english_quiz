@@ -43,3 +43,82 @@ class LearningProfile(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"LearningProfile(user={self.user_id})"
+
+
+class DailySession(TimeStampedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        DELIVERED = "delivered", "Delivered"
+        EXAM_SENT = "exam_sent", "Exam sent"
+        COMPLETED = "completed", "Completed"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="daily_sessions"
+    )
+    date = models.DateField()
+    book = models.ForeignKey(
+        "catalog.Book", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    unit = models.ForeignKey(
+        "catalog.Unit", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    words = models.ManyToManyField(
+        "catalog.Word", through="SessionWord", related_name="daily_sessions"
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    exam_sent_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    score = models.PositiveSmallIntegerField(null=True, blank=True)
+    total = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-date",)
+        constraints = [
+            models.UniqueConstraint(fields=["user", "date"], name="uniq_user_daily_session")
+        ]
+
+    def __str__(self) -> str:
+        return f"DailySession(user={self.user_id}, {self.date})"
+
+
+class SessionWord(models.Model):
+    daily_session = models.ForeignKey(
+        DailySession, on_delete=models.CASCADE, related_name="session_words"
+    )
+    word = models.ForeignKey("catalog.Word", on_delete=models.CASCADE)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ("order",)
+
+    def __str__(self) -> str:
+        return f"SessionWord(session={self.daily_session_id}, word={self.word_id})"
+
+
+class WordProgress(TimeStampedModel):
+    class Status(models.TextChoices):
+        NEW = "new", "New"
+        LEARNING = "learning", "Learning"
+        KNOWN = "known", "Known"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="word_progress"
+    )
+    word = models.ForeignKey("catalog.Word", on_delete=models.CASCADE, related_name="progress")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.NEW)
+    repetitions = models.PositiveSmallIntegerField(default=0)
+    ease_factor = models.FloatField(default=2.5)
+    interval_days = models.PositiveSmallIntegerField(default=0)
+    next_review = models.DateField(null=True, blank=True)
+    correct_count = models.PositiveSmallIntegerField(default=0)
+    wrong_count = models.PositiveSmallIntegerField(default=0)
+    last_reviewed = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "word"], name="uniq_user_word_progress")
+        ]
+
+    def __str__(self) -> str:
+        return f"WordProgress(user={self.user_id}, word={self.word_id})"
