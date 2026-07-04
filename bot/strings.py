@@ -75,3 +75,8 @@ NUDGE_STREAK = "🔥 <b>{streak} kunlik streak!</b> Zo'r ketyapsiz, barakalla! �
 TOP_TITLE = "🏆 <b>Oylik reyting</b>"
 TOP_EMPTY = "Bu oyda hali natija yo'q. Imtihonlarni yakunlang! 💪"
 TOP_YOUR_RANK = "Sizning o'rningiz: <b>{rank}</b> ({points} ball)"
+
+PICK_BOOK_PDF = "📚 Qaysi kitobni PDF sifatida yuklab olasiz?"
+NO_BOOKS = "Hozircha kitob mavjud emas."
+PDF_SENDING = "⏳ Tayyorlanmoqda..."
+PDF_ERROR = "Kechirasiz, PDF yuborishda xatolik yuz berdi."
