@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from asgiref.sync import sync_to_async
 
 from apps.learning.models import LearningProfile
 from bot import strings
@@ -21,6 +22,7 @@ router = Router()
 def format_profile(profile: LearningProfile) -> str:
     days = ", ".join(strings.WEEKDAY_SHORT[d] for d in profile.study_weekdays)
     audio = strings.BTN_AUDIO_ON if profile.audio_enabled else strings.BTN_AUDIO_OFF
+    nudges = strings.BTN_NUDGES_ON if profile.nudges_enabled else strings.BTN_NUDGES_OFF
     return "\n".join([
         strings.SETTINGS_TITLE,
         f"• {strings.SETTINGS_WORDS}: <b>{profile.words_per_session}</b>",
@@ -28,6 +30,7 @@ def format_profile(profile: LearningProfile) -> str:
         f"• {strings.SETTINGS_MORNING}: <b>{profile.morning_time:%H:%M}</b>",
         f"• {strings.SETTINGS_EXAM}: <b>{profile.exam_time:%H:%M}</b>",
         f"• {strings.SETTINGS_AUDIO}: <b>{audio}</b>",
+        f"• {strings.SETTINGS_NUDGES}: <b>{nudges}</b>",
         "",
         strings.SETTINGS_EDIT_HINT,
     ])
@@ -93,3 +96,11 @@ async def edit_audio(callback: CallbackQuery, state: FSMContext, profile: Learni
     await state.set_state(OnboardingStates.audio)
     await _seed_profile(state, profile)
     await callback.message.edit_text(strings.ASK_AUDIO, reply_markup=audio_keyboard())
+
+
+@router.callback_query(F.data == "set:nudges")
+async def toggle_nudges(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    profile.nudges_enabled = not profile.nudges_enabled
+    await sync_to_async(profile.save)(update_fields=["nudges_enabled", "updated_at"])
+    await callback.message.edit_text(format_profile(profile), reply_markup=settings_keyboard())

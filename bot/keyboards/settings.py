@@ -10,4 +10,5 @@ def settings_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=f"✏️ {strings.SETTINGS_MORNING}", callback_data="set:morning")],
         [InlineKeyboardButton(text=f"✏️ {strings.SETTINGS_EXAM}", callback_data="set:exam")],
         [InlineKeyboardButton(text=f"✏️ {strings.SETTINGS_AUDIO}", callback_data="set:audio")],
+        [InlineKeyboardButton(text=f"🔔 {strings.SETTINGS_NUDGES}", callback_data="set:nudges")],
     ])

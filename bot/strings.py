@@ -28,6 +28,8 @@ BTN_OTHER = "Boshqa…"
 BTN_AUDIO_ON = "🔊 Ha"
 BTN_AUDIO_OFF = "🔇 Yo'q"
 BTN_SAVE = "💾 Saqlash"
+BTN_NUDGES_ON = "🔔 Yoqilgan"
+BTN_NUDGES_OFF = "🔕 O'chirilgan"
 
 ONBOARD_DONE = (
     "🎉 Ajoyib! Rejangiz saqlandi. Har kuni belgilangan vaqtda so'zlar yuboriladi.\n"
@@ -40,6 +42,7 @@ SETTINGS_DAYS = "O'quv kunlari"
 SETTINGS_MORNING = "So'z vaqti"
 SETTINGS_EXAM = "Imtihon vaqti"
 SETTINGS_AUDIO = "Audio"
+SETTINGS_NUDGES = "Eslatmalar"
 SETTINGS_EDIT_HINT = "O'zgartirish uchun tegishli tugmani bosing."
 
 PARENT_LINK = (
