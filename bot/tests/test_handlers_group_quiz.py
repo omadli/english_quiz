@@ -67,6 +67,7 @@ async def test_toggle_unit_cb_no_sync_only_error():
 
         callback = AsyncMock()
         callback.message.chat.id = chat_id
+        callback.from_user.id = 999555
         callback.data = f"gq:unit:{unit1.id}"
         callback.message.edit_reply_markup = AsyncMock()
         callback.answer = AsyncMock()
@@ -84,3 +85,59 @@ async def test_toggle_unit_cb_no_sync_only_error():
         # that same thread, so it doesn't linger and make the test database
         # teardown fail with "database is being accessed by other users".
         await sync_to_async(connections.close_all)()
+
+
+@patch("bot.handlers.group_quiz.run_group_quiz")
+@patch("bot.handlers.group_quiz.get_active_session")
+async def test_start_quiz_rejects_non_owner(mock_get_session, mock_run):
+    """A group member who did not start the wizard can't launch the quiz.
+
+    `session.started_by_telegram_id` (111) differs from the tapping user
+    (999), so `_owned_session` must reject the callback with an alert and
+    `start_quiz` must never reach `run_group_quiz`/`asyncio.create_task`.
+    """
+    session = MagicMock()
+    session.started_by_telegram_id = 111
+    mock_get_session.return_value = session
+
+    callback = AsyncMock()
+    callback.from_user.id = 999
+    callback.message.chat.id = -100
+    callback.message.delete = AsyncMock()
+    callback.answer = AsyncMock()
+
+    await group_quiz.start_quiz(callback)
+
+    mock_run.assert_not_called()
+    callback.message.delete.assert_not_awaited()
+    callback.answer.assert_awaited_with(group_quiz._NOT_OWNER, show_alert=True)
+
+
+@patch("bot.handlers.group_quiz.asyncio.create_task")
+@patch("bot.handlers.group_quiz.run_group_quiz", new_callable=AsyncMock)
+@patch("bot.handlers.group_quiz.get_active_session")
+async def test_start_quiz_allows_owner(mock_get_session, mock_run, mock_create_task):
+    """The admin who started the wizard (matching `started_by_telegram_id`) can launch it."""
+    session = MagicMock()
+    session.started_by_telegram_id = 111
+    session.id = 42
+    mock_get_session.return_value = session
+
+    callback = AsyncMock()
+    callback.from_user.id = 111
+    callback.message.chat.id = -100
+    callback.message.delete = AsyncMock()
+    callback.answer = AsyncMock()
+
+    await group_quiz.start_quiz(callback)
+
+    mock_run.assert_called_once_with(callback.bot, 42)
+    callback.message.delete.assert_awaited_once()
+    mock_create_task.assert_called_once()
+
+    # `run_group_quiz(...)` (an AsyncMock) produced a real coroutine object
+    # that was handed to the (mocked) `asyncio.create_task` without ever
+    # being awaited or scheduled; close it explicitly so Python doesn't warn
+    # "coroutine was never awaited" when it's garbage collected.
+    launched_coro = mock_create_task.call_args.args[0]
+    launched_coro.close()

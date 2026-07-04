@@ -32,11 +32,30 @@ _ASK_BOOK = "📚 Qaysi kitobdan test qilamiz?"
 _ASK_UNITS = "Unit(lar)ni tanlang, so'ng «Tayyor» bosing."
 _NOT_ADMIN = "Bu buyruq faqat guruh adminlari uchun."
 _ALREADY = "Bu guruhda test allaqachon sozlanmoqda yoki ketmoqda. /stop bilan to'xtating."
+_NOT_OWNER = "Bu testni faqat uni boshlagan admin boshqaradi."
 
 
 async def is_chat_admin(bot: Bot, chat_id: int, user_id: int) -> bool:
     member = await bot.get_chat_member(chat_id, user_id)
     return member.status in ("administrator", "creator")
+
+
+async def _owned_session(callback: CallbackQuery) -> GroupQuizSession | None:
+    """Fetch the active session and enforce that only its starter controls it.
+
+    Every wizard callback shares this check so a non-admin group member
+    tapping a live inline keyboard (or racing the admin) can't hijack the
+    config or launch the quiz. Mirrors `get_active_session` returning
+    ``None`` when there's nothing to act on, but additionally answers the
+    callback with an alert when the tapper isn't the session's starter.
+    """
+    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    if session is None:
+        return None
+    if session.started_by_telegram_id != callback.from_user.id:
+        await callback.answer(_NOT_OWNER, show_alert=True)
+        return None
+    return session
 
 
 @router.message(Command("quiz"))
@@ -54,7 +73,7 @@ async def cmd_quiz(message: Message) -> None:
 @router.callback_query(F.data.startswith("gq:book:"))
 async def pick_book(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None:
         return
     book_number = int(callback.data.split(":")[-1])
@@ -77,7 +96,7 @@ def _book_number(session: GroupQuizSession) -> int | None:
 @router.callback_query(F.data.startswith("gq:unit:"))
 async def toggle_unit_cb(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None or await sync_to_async(_book_number)(session) is None:
         return
     unit_id = int(callback.data.split(":")[-1])
@@ -91,7 +110,7 @@ async def toggle_unit_cb(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "gq:units_done")
 async def units_done(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None or not session.unit_ids:
         await callback.answer("Kamida bitta unit tanlang!", show_alert=True)
         return
@@ -101,7 +120,7 @@ async def units_done(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("gq:type:"))
 async def toggle_type_cb(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None:
         return
     await sync_to_async(toggle_type)(session, callback.data.split(":")[-1])
@@ -112,7 +131,7 @@ async def toggle_type_cb(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "gq:types_done")
 async def types_done(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None or not session.question_types:
         await callback.answer("Kamida bitta tur tanlang!", show_alert=True)
         return
@@ -122,7 +141,7 @@ async def types_done(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("gq:count:"))
 async def pick_count(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None:
         return
     await sync_to_async(set_count)(session, int(callback.data.split(":")[-1]))
@@ -134,7 +153,7 @@ async def pick_count(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("gq:int:"))
 async def pick_interval(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None:
         return
     await sync_to_async(set_interval)(session, int(callback.data.split(":")[-1]))
@@ -146,7 +165,7 @@ async def pick_interval(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "gq:start")
 async def start_quiz(callback: CallbackQuery) -> None:
     await callback.answer()
-    session = await sync_to_async(get_active_session)(callback.message.chat.id)
+    session = await _owned_session(callback)
     if session is None:
         return
     await callback.message.delete()
