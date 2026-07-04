@@ -64,3 +64,7 @@ GENERIC_ERROR = "⚠️ Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring."
 
 NO_WARDS = "Hali hech kim ulanmagan. /parent yoki /teacher bilan havola oling."
 PICK_WARD = "Kimning hisobotini ko'rmoqchisiz?"
+
+NUDGE_STUDY = "📚 So'zlarni takrorlayapsizmi? Kechqurun imtihon bor — tayyorlaning! 💪"
+NUDGE_PRE_EXAM = "⏰ Imtihon vaqti yaqinlashdi! Tayyor bo'ling. 📝"
+NUDGE_STREAK = "🔥 <b>{streak} kunlik streak!</b> Zo'r ketyapsiz, barakalla! 🎉"
