@@ -2,7 +2,7 @@ import asyncio
 
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
+from aiogram.enums import ParseMode, PollType
 from aiogram.types import BufferedInputFile
 
 from bot.config import get_bot_token
@@ -35,3 +35,42 @@ def send_daily(chat_id: int, card: bytes | None, items: list[dict]) -> None:
             await bot.session.close()
 
     asyncio.run(_run())
+
+
+async def _send_quiz_poll(
+    bot: Bot,
+    chat_id: int,
+    question: str,
+    options: list[str],
+    correct_option: int,
+    explanation: str | None = None,
+) -> str:
+    msg = await bot.send_poll(
+        chat_id=chat_id,
+        question=question,
+        options=options,
+        type=PollType.QUIZ,
+        correct_option_id=correct_option,
+        is_anonymous=False,
+        explanation=explanation,
+    )
+    return msg.poll.id
+
+
+def send_quiz_poll(
+    chat_id: int,
+    question: str,
+    options: list[str],
+    correct_option: int,
+    explanation: str | None = None,
+) -> str:
+    async def _run() -> str:
+        bot = _make_bot()
+        try:
+            return await _send_quiz_poll(
+                bot, chat_id, question, options, correct_option, explanation
+            )
+        finally:
+            await bot.session.close()
+
+    return asyncio.run(_run())
