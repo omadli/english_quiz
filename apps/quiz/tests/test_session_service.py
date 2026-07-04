@@ -42,3 +42,23 @@ def test_set_book_and_toggle_unit():
     s.refresh_from_db()
     assert s.unit_ids == [u2.id]
     assert [u.id for u in units_for_book(1)] == [u1.id, u2.id]
+
+
+def test_type_count_interval_and_abort():
+    from apps.quiz.services.session import abort_active, set_count, set_interval, toggle_type
+
+    s = start_configuring(-200, 5)
+    toggle_type(s, "en_uz")
+    toggle_type(s, "uz_en")
+    toggle_type(s, "en_uz")  # off
+    s.refresh_from_db()
+    assert s.question_types == ["uz_en"]
+    set_count(s, 15)
+    set_interval(s, 30)
+    s.refresh_from_db()
+    assert s.question_count == 15
+    assert s.interval_seconds == 30
+    assert abort_active(-200) is True
+    s.refresh_from_db()
+    assert s.status == GroupQuizSession.Status.ABORTED
+    assert abort_active(-200) is False  # nothing active now

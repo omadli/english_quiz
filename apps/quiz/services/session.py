@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from apps.catalog.models import Book, Unit
 from apps.quiz.models import GroupQuizSession
 
@@ -41,3 +43,33 @@ def toggle_unit(session: GroupQuizSession, unit_id: int) -> None:
         ids.append(unit_id)
     session.unit_ids = sorted(ids)
     session.save(update_fields=["unit_ids", "updated_at"])
+
+
+def toggle_type(session: GroupQuizSession, qtype: str) -> None:
+    types = list(session.question_types)
+    if qtype in types:
+        types.remove(qtype)
+    else:
+        types.append(qtype)
+    session.question_types = types
+    session.save(update_fields=["question_types", "updated_at"])
+
+
+def set_count(session: GroupQuizSession, count: int) -> None:
+    session.question_count = count
+    session.save(update_fields=["question_count", "updated_at"])
+
+
+def set_interval(session: GroupQuizSession, seconds: int) -> None:
+    session.interval_seconds = seconds
+    session.save(update_fields=["interval_seconds", "updated_at"])
+
+
+def abort_active(chat_id: int) -> bool:
+    session = get_active_session(chat_id)
+    if session is None:
+        return False
+    session.status = GroupQuizSession.Status.ABORTED
+    session.finished_at = timezone.now()
+    session.save(update_fields=["status", "finished_at", "updated_at"])
+    return True
