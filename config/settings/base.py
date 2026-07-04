@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.catalog",
     "apps.learning",
+    "apps.quiz",
 ]
 
 MIDDLEWARE = [
