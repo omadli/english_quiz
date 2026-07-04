@@ -42,6 +42,15 @@ SETTINGS_EXAM = "Imtihon vaqti"
 SETTINGS_AUDIO = "Audio"
 SETTINGS_EDIT_HINT = "O'zgartirish uchun tegishli tugmani bosing."
 
+PARENT_LINK = (
+    "👨‍👩‍👧 Ota-ona rejimi.\nFarzandingizga shu havolani yuboring — u bosgach ulanadi va "
+    "siz kunlik hisobot olib turasiz:\n\n{link}"
+)
+TEACHER_LINK = (
+    "👨‍🏫 Ustoz rejimi.\nO'quvchingizga shu havolani yuboring — u bosgach ulanadi va "
+    "siz kunlik hisobot olib turasiz:\n\n{link}"
+)
+
 HELP_TEXT = (
     "Buyruqlar:\n"
     "/start — boshlash / qayta ishga tushirish\n"
