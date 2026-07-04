@@ -101,6 +101,12 @@ Learners send `/top` to see the current month's leaderboard — the top 10 by
 correct-answer points from completed exams (ties broken by number of study
 days), plus their own rank if they're outside the top 10.
 
+## Book PDF download
+
+Users send `/book` and pick a volume to download it as a PDF — the uploaded
+`Book.pdf` if one exists, otherwise a vocabulary PDF generated on the fly from
+the book's words.
+
 ## Full stack (Docker)
 
 ```bash

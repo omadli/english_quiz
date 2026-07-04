@@ -5,6 +5,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 
 from bot.config import get_bot_token, get_fsm_redis_url
 from bot.handlers import (
+    books,
     common,
     group_quiz,
     leaderboard,
@@ -33,4 +34,5 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(group_quiz.router)
     dp.include_router(relations.router)
     dp.include_router(leaderboard.router)
+    dp.include_router(books.router)
     return dp

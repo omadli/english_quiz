@@ -22,6 +22,7 @@ def _detach_handler_routers():
     """
     yield
     from bot.handlers import (
+        books,
         common,
         group_quiz,
         leaderboard,
@@ -32,7 +33,17 @@ def _detach_handler_routers():
         start,
     )
 
-    for module in (common, group_quiz, leaderboard, onboarding, quiz, relations, settings, start):
+    for module in (
+        books,
+        common,
+        group_quiz,
+        leaderboard,
+        onboarding,
+        quiz,
+        relations,
+        settings,
+        start,
+    ):
         router = module.router
         parent = router.parent_router
         if parent is not None:
