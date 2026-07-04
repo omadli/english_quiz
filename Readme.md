@@ -95,6 +95,12 @@ and a daily anonymous practice quiz-poll (`PRACTICE_POLL_HOUR`). Learners can
 turn all of this off from `/settings`. (Re-run `setup_periodic_tasks` after
 migrating to register the new Beat jobs.)
 
+## Monthly leaderboard
+
+Learners send `/top` to see the current month's leaderboard — the top 10 by
+correct-answer points from completed exams (ties broken by number of study
+days), plus their own rank if they're outside the top 10.
+
 ## Full stack (Docker)
 
 ```bash
