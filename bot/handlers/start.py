@@ -1,12 +1,14 @@
 import datetime
 
 from aiogram import F, Router
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
+from apps.accounts.models import User
 from apps.learning.models import LearningProfile, default_weekdays
+from apps.relations.services.referral import redeem_token
 from bot import strings
 from bot.keyboards.onboarding import intro_keyboard, words_keyboard
 from bot.services.users import set_starting_position, update_profile
@@ -25,8 +27,19 @@ DEFAULTS = {
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext, profile: LearningProfile) -> None:
+async def cmd_start(
+    message: Message,
+    state: FSMContext,
+    command: CommandObject,
+    user: User,
+    profile: LearningProfile,
+) -> None:
     await state.clear()
+    payload = command.args or ""
+    if payload.startswith("g"):
+        guardianship = await sync_to_async(redeem_token)(payload[1:], user)
+        if guardianship is not None:
+            await message.answer(strings.LINKED_OK)
     if profile.onboarded:
         await message.answer(strings.WELCOME_BACK)
         return

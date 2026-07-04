@@ -7,6 +7,7 @@ WELCOME_NEW = (
     "Keling, avval o'quv rejangizni sozlaymiz."
 )
 WELCOME_BACK = "Xush kelibsiz! 👋 Sozlamalarni ko'rish uchun /settings buyrug'ini yuboring."
+LINKED_OK = "✅ Muvaffaqiyatli ulandingiz! Endi hisobotlarni olib turasiz."
 ONBOARD_START_BTN = "🚀 Sozlashni boshlash"
 ONBOARD_DEFAULTS_BTN = "⚡ Standart bilan boshlash"
 
