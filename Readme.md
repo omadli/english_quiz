@@ -68,6 +68,15 @@ words (+ SRS-due reviews); the bot's poll-answer handler grades them and
 updates each word's SM-2 schedule; `finalize_due_exams` closes the session
 after `EXAM_WINDOW_MINUTES` and sends the daily report.
 
+## Group quiz
+
+Add the bot to a Telegram group and make it an **admin**. In @BotFather run
+`/setprivacy` → **Disable** so the bot receives group commands. Then a group
+admin sends `/quiz` and follows the wizard (book → units → question types →
+count → interval) to start a QuizBot-style quiz; the bot posts sequential quiz
+polls and a leaderboard ranking each student by correct answers then speed.
+`/stop` aborts a running quiz.
+
 ## Full stack (Docker)
 
 ```bash

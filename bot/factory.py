@@ -4,7 +4,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 
 from bot.config import get_bot_token, get_fsm_redis_url
-from bot.handlers import common, onboarding, quiz, settings, start
+from bot.handlers import common, group_quiz, onboarding, quiz, settings, start
 from bot.middlewares.user import UserMiddleware
 
 
@@ -21,4 +21,5 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(settings.router)
     dp.include_router(common.router)
     dp.include_router(quiz.router)
+    dp.include_router(group_quiz.router)
     return dp
