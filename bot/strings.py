@@ -71,3 +71,7 @@ PICK_WARD = "Kimning hisobotini ko'rmoqchisiz?"
 NUDGE_STUDY = "📚 So'zlarni takrorlayapsizmi? Kechqurun imtihon bor — tayyorlaning! 💪"
 NUDGE_PRE_EXAM = "⏰ Imtihon vaqti yaqinlashdi! Tayyor bo'ling. 📝"
 NUDGE_STREAK = "🔥 <b>{streak} kunlik streak!</b> Zo'r ketyapsiz, barakalla! 🎉"
+
+TOP_TITLE = "🏆 <b>Oylik reyting</b>"
+TOP_EMPTY = "Bu oyda hali natija yo'q. Imtihonlarni yakunlang! 💪"
+TOP_YOUR_RANK = "Sizning o'rningiz: <b>{rank}</b> ({points} ball)"
