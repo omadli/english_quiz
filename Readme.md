@@ -62,6 +62,12 @@ configured `morning_time` (on their `study_weekdays`, in their timezone).
 Audio combining needs `ffmpeg` (bundled in the Docker image; install locally if
 running the worker outside Docker).
 
+The `worker` + `beat` services also run the evening exam: at each user's
+`exam_time`, `dispatch_evening_exams` sends native quiz polls over the day's
+words (+ SRS-due reviews); the bot's poll-answer handler grades them and
+updates each word's SM-2 schedule; `finalize_due_exams` closes the session
+after `EXAM_WINDOW_MINUTES` and sends the daily report.
+
 ## Full stack (Docker)
 
 ```bash
