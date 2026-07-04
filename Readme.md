@@ -86,6 +86,15 @@ progress report (words learned, exam score, streak) at `GUARDIAN_REPORT_HOUR`,
 and can request it any time with `/report`. (Run `setup_periodic_tasks` once
 after migrating to register the daily job.)
 
+## Motivation & streaks
+
+The bot nudges learners during the day: a study reminder (`STUDY_NUDGE_HOUR`),
+a pre-exam reminder (`PRE_EXAM_NUDGE_MINUTES` before each learner's exam), a
+streak celebration when a completed exam hits a `STREAK_MILESTONES` day count,
+and a daily anonymous practice quiz-poll (`PRACTICE_POLL_HOUR`). Learners can
+turn all of this off from `/settings`. (Re-run `setup_periodic_tasks` after
+migrating to register the new Beat jobs.)
+
 ## Full stack (Docker)
 
 ```bash
