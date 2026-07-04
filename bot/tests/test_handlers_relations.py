@@ -51,3 +51,32 @@ async def test_report_no_wards(mock_wards):
     message = AsyncMock()
     await relations.cmd_report(message, user=MagicMock())
     message.answer.assert_awaited()
+
+
+@patch("bot.handlers.relations.build_learner_report")
+@patch("bot.handlers.relations._get_learner")
+@patch("bot.handlers.relations.Guardianship")
+async def test_pick_ward_report_rejects_non_guardian(
+    mock_guardianship, mock_get_learner, mock_build
+):
+    mock_guardianship.objects.filter.return_value.exists.return_value = False
+    callback = AsyncMock()
+    callback.data = "rep:999"
+    await relations.pick_ward_report(callback, user=MagicMock())
+    mock_get_learner.assert_not_called()
+    mock_build.assert_not_called()
+    callback.message.answer.assert_not_awaited()
+
+
+@patch("bot.handlers.relations.build_learner_report")
+@patch("bot.handlers.relations._get_learner")
+@patch("bot.handlers.relations.Guardianship")
+async def test_pick_ward_report_allows_guardian(mock_guardianship, mock_get_learner, mock_build):
+    mock_guardianship.objects.filter.return_value.exists.return_value = True
+    mock_get_learner.return_value = MagicMock()
+    mock_build.return_value = "RPT"
+    callback = AsyncMock()
+    callback.data = "rep:5"
+    await relations.pick_ward_report(callback, user=MagicMock())
+    mock_build.assert_called_once()
+    callback.message.answer.assert_awaited_with("RPT")
