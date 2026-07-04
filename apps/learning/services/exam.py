@@ -71,5 +71,9 @@ def _question_for(word: Word, qtype: str) -> dict:
     }
 
 
-def build_questions(words: list[Word]) -> list[dict]:
-    return [_question_for(word, _TYPES[i % 3]) for i, word in enumerate(words)]
+def build_questions(words: list[Word], types: list[str] | None = None) -> list[dict]:
+    active_types = types or _TYPES
+    return [
+        _question_for(word, active_types[i % len(active_types)])
+        for i, word in enumerate(words)
+    ]

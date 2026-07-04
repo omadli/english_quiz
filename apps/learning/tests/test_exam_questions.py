@@ -47,6 +47,13 @@ def test_en_uz_correct_option_is_the_uz_translation(book_words):
     assert q["options"][q["correct_option"]] == words[0].uz
 
 
+def test_build_questions_respects_type_filter(book_words):
+    from apps.learning.services.exam import build_questions
+    _, _, words = book_words
+    qs = build_questions(words[:4], types=["en_uz"])
+    assert {q["question_type"] for q in qs} == {"en_uz"}
+
+
 def test_select_exam_words_includes_day_and_due_reviews(book_words):
     _, unit, words = book_words
     user = User.objects.create(first_name="T")
