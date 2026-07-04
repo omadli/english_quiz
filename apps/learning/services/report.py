@@ -4,6 +4,8 @@ from aiogram.exceptions import TelegramForbiddenError
 from django.utils import timezone
 
 from apps.learning.models import DailySession, ExamQuestion
+from apps.learning.services.nudges import streak_milestone_message
+from apps.relations.services.reports import compute_streak
 from bot.sender import send_daily
 
 logger = logging.getLogger(__name__)
@@ -50,3 +52,13 @@ def finalize_exam(session: DailySession) -> None:
         account.save(update_fields=["blocked_bot", "updated_at"])
     except Exception as exc:
         logger.warning("failed to send exam report for session %s: %s", session.id, exc)
+
+    if not account.blocked_bot and getattr(session.user, "learning_profile", None) \
+            and session.user.learning_profile.nudges_enabled:
+        message = streak_milestone_message(compute_streak(session.user))
+        if message:
+            try:
+                send_daily(account.telegram_id, None,
+                           [{"caption": message, "image": None, "audio": None}])
+            except Exception as exc:  # best-effort celebration
+                logger.warning("failed to send streak celebration for %s: %s", session.id, exc)
