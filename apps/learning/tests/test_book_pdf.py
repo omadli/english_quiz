@@ -7,6 +7,14 @@ from apps.learning.services.book_pdf import active_books, build_book_vocab_pdf, 
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def media_root(settings, tmp_path):
+    # Django's FileField writes hit the real filesystem and are NOT rolled back
+    # by the test-DB transaction; isolate each test run under a throwaway
+    # MEDIA_ROOT so uploaded/generated PDFs never land in the real media/ tree.
+    settings.MEDIA_ROOT = tmp_path
+
+
 def _book(number=1, **kw):
     return Book.objects.create(number=number, title=f"Book {number}", slug=f"book-{number}", **kw)
 
