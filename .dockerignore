@@ -2,7 +2,16 @@
 .venv
 __pycache__
 *.pyc
+*.pyo
 db.sqlite3
 .env
 staticfiles
 docs
+
+# Caches / local pins — not needed in the image
+.ruff_cache
+.pytest_cache
+.mypy_cache
+.hypothesis
+.coverage
+.python-version

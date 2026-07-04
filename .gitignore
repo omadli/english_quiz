@@ -50,6 +50,10 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.ruff_cache/
+
+# Local interpreter pin (uv/pyenv) — not tracked
+.python-version
 
 # Translations
 *.mo
