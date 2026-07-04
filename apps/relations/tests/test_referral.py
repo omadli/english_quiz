@@ -1,7 +1,7 @@
 import pytest
 
 from apps.accounts.models import User
-from apps.relations.models import Guardianship, ReferralToken
+from apps.relations.models import ReferralToken
 from apps.relations.services.referral import create_referral_token, redeem_token
 
 pytestmark = pytest.mark.django_db
