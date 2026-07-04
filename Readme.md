@@ -49,6 +49,19 @@ python -m uv run python -m bot          # long-polling bot
 Send `/start` to your bot to register and run onboarding; `/settings` to edit.
 Full stack (bot in Docker): `docker compose up --build bot`.
 
+## Daily delivery (Phase 2a)
+
+After migrating, register the recurring Beat task once:
+
+```bash
+python -m uv run python manage.py setup_periodic_tasks
+```
+
+The `worker` + `beat` compose services then deliver each user's words at their
+configured `morning_time` (on their `study_weekdays`, in their timezone).
+Audio combining needs `ffmpeg` (bundled in the Docker image; install locally if
+running the worker outside Docker).
+
 ## Full stack (Docker)
 
 ```bash
