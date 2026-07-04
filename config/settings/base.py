@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.catalog",
     "apps.learning",
     "apps.quiz",
+    "apps.relations",
 ]
 
 MIDDLEWARE = [
@@ -110,6 +111,10 @@ BOT_TOKEN = env("BOT_TOKEN", default="")
 # Evening exam (Phase 2b)
 EXAM_WINDOW_MINUTES = env.int("EXAM_WINDOW_MINUTES", default=60)
 EXAM_REVIEW_CAP = env.int("EXAM_REVIEW_CAP", default=10)
+
+# Guardian reports & referral bot (Phase 4a)
+GUARDIAN_REPORT_HOUR = env.int("GUARDIAN_REPORT_HOUR", default=21)
+BOT_USERNAME = env("BOT_USERNAME", default="")
 
 UNFOLD = {
     "SITE_TITLE": "4000 Essential Words",
