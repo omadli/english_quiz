@@ -1,3 +1,4 @@
+from aiogram.exceptions import TelegramForbiddenError
 from django.utils import timezone
 
 from apps.learning.models import DailySession, LearningProfile, SessionWord, WordProgress
@@ -62,7 +63,12 @@ def run_delivery(user_id: int) -> DailySession | None:
         items.append({"caption": _caption(word), "image": image, "audio": audio})
 
     card = render_daily_card(words, date)
-    send_daily(account.telegram_id, card, items)
+    try:
+        send_daily(account.telegram_id, card, items)
+    except TelegramForbiddenError:
+        account.blocked_bot = True
+        account.save(update_fields=["blocked_bot", "updated_at"])
+        return None
 
     advance_position(profile, words[-1])
     session.status = DailySession.Status.DELIVERED

@@ -1,6 +1,7 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+from aiogram.exceptions import TelegramForbiddenError
 
 from apps.accounts.models import TelegramAccount, User
 from apps.catalog.models import Book, Unit, Word
@@ -63,3 +64,30 @@ def test_run_delivery_no_content_sends_nothing(mock_send, user_with_words):
     p.save()
     assert deliver_mod.run_delivery(user.id) is None
     mock_send.assert_not_called()
+
+
+@patch(
+    "apps.learning.services.deliver.send_daily",
+    side_effect=TelegramForbiddenError(method=MagicMock(), message="bot was blocked by the user"),
+)
+@patch("apps.learning.services.deliver.build_word_audio", return_value=b"AUD")
+@patch("apps.learning.services.deliver.render_daily_card", return_value=b"CARD")
+def test_run_delivery_sets_blocked_bot_on_forbidden(
+    mock_card, mock_audio, mock_send, user_with_words
+):
+    user, book, unit = user_with_words
+    result = deliver_mod.run_delivery(user.id)
+    assert result is None
+
+    user.telegram.refresh_from_db()
+    assert user.telegram.blocked_bot is True
+
+    user.learning_profile.refresh_from_db()
+    assert user.learning_profile.current_word_order == 0
+
+    assert not DailySession.objects.filter(
+        user=user, status=DailySession.Status.DELIVERED
+    ).exists()
+    assert DailySession.objects.filter(
+        user=user, status=DailySession.Status.PENDING
+    ).exists()
