@@ -16,7 +16,9 @@ def start_configuring(chat_id: int, user_id: int) -> GroupQuizSession | None:
     if get_active_session(chat_id) is not None:
         return None
     return GroupQuizSession.objects.create(
-        chat_id=chat_id, started_by_id=user_id, status=GroupQuizSession.Status.CONFIGURING
+        chat_id=chat_id,
+        started_by_telegram_id=user_id,
+        status=GroupQuizSession.Status.CONFIGURING,
     )
 
 

@@ -6,9 +6,17 @@ from .models import GroupQuizParticipant, GroupQuizQuestion, GroupQuizSession
 
 @admin.register(GroupQuizSession)
 class GroupQuizSessionAdmin(ModelAdmin):
-    list_display = ("chat_id", "book", "status", "question_count", "interval_seconds", "started_at")
+    list_display = (
+        "chat_id",
+        "book",
+        "status",
+        "question_count",
+        "interval_seconds",
+        "started_at",
+        "started_by_telegram_id",
+    )
     list_filter = ("status",)
-    raw_id_fields = ("started_by", "book")
+    raw_id_fields = ("book",)
 
 
 @admin.register(GroupQuizQuestion)

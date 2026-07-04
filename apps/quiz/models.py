@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models
 
 from apps.common.models import TimeStampedModel
@@ -16,13 +15,7 @@ class GroupQuizSession(TimeStampedModel):
         ABORTED = "aborted", "Aborted"
 
     chat_id = models.BigIntegerField(db_index=True)
-    started_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="+",
-    )
+    started_by_telegram_id = models.BigIntegerField(null=True, blank=True)
     book = models.ForeignKey(
         "catalog.Book", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
