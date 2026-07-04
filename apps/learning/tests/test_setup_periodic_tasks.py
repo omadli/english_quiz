@@ -28,3 +28,15 @@ def test_setup_registers_exam_tasks():
     # idempotent
     call_command("setup_periodic_tasks")
     assert PeriodicTask.objects.filter(name="dispatch_evening_exams").count() == 1
+
+
+def test_setup_registers_guardian_report_crontab():
+    from django_celery_beat.models import PeriodicTask
+
+    call_command("setup_periodic_tasks")
+    task = PeriodicTask.objects.get(name="dispatch_guardian_reports")
+    assert task.task == "apps.relations.tasks.dispatch_guardian_reports"
+    assert task.crontab is not None
+    # idempotent
+    call_command("setup_periodic_tasks")
+    assert PeriodicTask.objects.filter(name="dispatch_guardian_reports").count() == 1

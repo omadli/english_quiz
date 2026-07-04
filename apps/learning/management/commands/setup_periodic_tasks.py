@@ -18,4 +18,17 @@ class Command(BaseCommand):
             PeriodicTask.objects.update_or_create(
                 name=name, defaults={"interval": schedule, "task": task}
             )
+
+        from django.conf import settings
+        from django_celery_beat.models import CrontabSchedule
+
+        crontab, _ = CrontabSchedule.objects.get_or_create(
+            minute="0", hour=str(settings.GUARDIAN_REPORT_HOUR),
+            day_of_week="*", day_of_month="*", month_of_year="*",
+        )
+        PeriodicTask.objects.update_or_create(
+            name="dispatch_guardian_reports",
+            defaults={"crontab": crontab, "interval": None,
+                      "task": "apps.relations.tasks.dispatch_guardian_reports"},
+        )
         self.stdout.write(self.style.SUCCESS("periodic tasks registered"))
