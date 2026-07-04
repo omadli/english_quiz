@@ -77,6 +77,15 @@ count → interval) to start a QuizBot-style quiz; the bot posts sequential quiz
 polls and a leaderboard ranking each student by correct answers then speed.
 `/stop` aborts a running quiz.
 
+## Parent / Teacher reports
+
+A parent or teacher sends `/parent` (or `/teacher`) to the bot to get a
+one-time deep-link (`t.me/<bot>?start=g...`). They forward it to their
+child/student, who taps it to connect. The guardian then gets a daily
+progress report (words learned, exam score, streak) at `GUARDIAN_REPORT_HOUR`,
+and can request it any time with `/report`. (Run `setup_periodic_tasks` once
+after migrating to register the daily job.)
+
 ## Full stack (Docker)
 
 ```bash

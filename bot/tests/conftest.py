@@ -21,9 +21,9 @@ def _detach_handler_routers():
     is unaffected since it only ever builds one Dispatcher per process.
     """
     yield
-    from bot.handlers import common, group_quiz, onboarding, quiz, settings, start
+    from bot.handlers import common, group_quiz, onboarding, quiz, relations, settings, start
 
-    for module in (common, group_quiz, onboarding, quiz, settings, start):
+    for module in (common, group_quiz, onboarding, quiz, relations, settings, start):
         router = module.router
         parent = router.parent_router
         if parent is not None:
