@@ -76,3 +76,18 @@ def send_quiz_poll(
             await bot.session.close()
 
     return asyncio.run(_run())
+
+
+async def _send_document(bot: Bot, chat_id: int, data: bytes, filename: str) -> None:
+    await bot.send_document(chat_id, BufferedInputFile(data, filename))
+
+
+def send_document(chat_id: int, data: bytes, filename: str) -> None:
+    async def _run() -> None:
+        bot = _make_bot()
+        try:
+            await _send_document(bot, chat_id, data, filename)
+        finally:
+            await bot.session.close()
+
+    asyncio.run(_run())
