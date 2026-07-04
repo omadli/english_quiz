@@ -106,6 +106,10 @@ TTS_PROVIDER = env("TTS_PROVIDER", default="apps.common.tts.GTTSProvider")
 # Telegram (Phase 1+)
 BOT_TOKEN = env("BOT_TOKEN", default="")
 
+# Evening exam (Phase 2b)
+EXAM_WINDOW_MINUTES = env.int("EXAM_WINDOW_MINUTES", default=60)
+EXAM_REVIEW_CAP = env.int("EXAM_REVIEW_CAP", default=10)
+
 UNFOLD = {
     "SITE_TITLE": "4000 Essential Words",
     "SITE_HEADER": "4000 Essential Words",

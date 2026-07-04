@@ -1,7 +1,7 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 
-from .models import DailySession, LearningProfile, WordProgress
+from .models import DailySession, ExamQuestion, LearningProfile, WordProgress
 
 
 @admin.register(LearningProfile)
@@ -26,3 +26,11 @@ class WordProgressAdmin(ModelAdmin):
     list_filter = ("status",)
     raw_id_fields = ("user", "word")
     search_fields = ("word__en",)
+
+
+@admin.register(ExamQuestion)
+class ExamQuestionAdmin(ModelAdmin):
+    list_display = ("daily_session", "word", "question_type", "is_correct", "answered_at")
+    list_filter = ("question_type", "is_correct")
+    raw_id_fields = ("daily_session", "word")
+    search_fields = ("poll_id", "word__en")

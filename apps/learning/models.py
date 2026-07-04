@@ -122,3 +122,28 @@ class WordProgress(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"WordProgress(user={self.user_id}, word={self.word_id})"
+
+
+class ExamQuestion(TimeStampedModel):
+    class QType(models.TextChoices):
+        EN_UZ = "en_uz", "EN→UZ"
+        UZ_EN = "uz_en", "UZ→EN"
+        DEF_WORD = "def_word", "Definition"
+
+    daily_session = models.ForeignKey(
+        DailySession, on_delete=models.CASCADE, related_name="questions"
+    )
+    word = models.ForeignKey("catalog.Word", on_delete=models.CASCADE)
+    question_type = models.CharField(max_length=10, choices=QType.choices)
+    poll_id = models.CharField(max_length=64, unique=True, db_index=True)
+    options = models.JSONField(default=list)
+    correct_option = models.PositiveSmallIntegerField()
+    chosen_option = models.PositiveSmallIntegerField(null=True, blank=True)
+    is_correct = models.BooleanField(null=True, blank=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("id",)
+
+    def __str__(self) -> str:
+        return f"ExamQuestion(session={self.daily_session_id}, word={self.word_id})"
