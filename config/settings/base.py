@@ -116,6 +116,12 @@ EXAM_REVIEW_CAP = env.int("EXAM_REVIEW_CAP", default=10)
 GUARDIAN_REPORT_HOUR = env.int("GUARDIAN_REPORT_HOUR", default=21)
 BOT_USERNAME = env("BOT_USERNAME", default="")
 
+# Nudges & streaks (Phase 4b)
+STUDY_NUDGE_HOUR = env.int("STUDY_NUDGE_HOUR", default=14)
+PRACTICE_POLL_HOUR = env.int("PRACTICE_POLL_HOUR", default=12)
+PRE_EXAM_NUDGE_MINUTES = env.int("PRE_EXAM_NUDGE_MINUTES", default=30)
+STREAK_MILESTONES = env.list("STREAK_MILESTONES", cast=int, default=[3, 7, 14, 30, 50, 100])
+
 UNFOLD = {
     "SITE_TITLE": "4000 Essential Words",
     "SITE_HEADER": "4000 Essential Words",

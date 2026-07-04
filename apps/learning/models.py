@@ -26,6 +26,7 @@ class LearningProfile(TimeStampedModel):
     language = models.CharField(max_length=8, default="uz")
     onboarded = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    nudges_enabled = models.BooleanField(default=True)
     current_book = models.ForeignKey(
         "catalog.Book", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
@@ -71,6 +72,8 @@ class DailySession(TimeStampedModel):
     completed_at = models.DateTimeField(null=True, blank=True)
     score = models.PositiveSmallIntegerField(null=True, blank=True)
     total = models.PositiveSmallIntegerField(null=True, blank=True)
+    study_nudged = models.BooleanField(default=False)
+    pre_exam_nudged = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("-date",)
