@@ -61,3 +61,6 @@ HELP_TEXT = (
 CANCELLED = "Bekor qilindi."
 NOTHING_TO_CANCEL = "Bekor qiladigan amal yo'q."
 GENERIC_ERROR = "⚠️ Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring."
+
+NO_WARDS = "Hali hech kim ulanmagan. /parent yoki /teacher bilan havola oling."
+PICK_WARD = "Kimning hisobotini ko'rmoqchisiz?"
