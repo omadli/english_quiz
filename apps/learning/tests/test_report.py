@@ -1,4 +1,7 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
+from aiogram.exceptions import TelegramForbiddenError
 from django.utils import timezone
 
 from apps.accounts.models import TelegramAccount, User
@@ -43,3 +46,16 @@ def test_finalize_exam_marks_completed_and_sends():
     assert session.score == 1                 # recomputed from is_correct=True count
     assert session.completed_at is not None
     mock_send.assert_called_once()
+
+
+def test_finalize_exam_survives_forbidden_and_marks_blocked():
+    user, session = _session_with_answers()
+    with patch(
+        "apps.learning.services.report.send_daily",
+        side_effect=TelegramForbiddenError(method=MagicMock(), message="bot blocked"),
+    ):
+        report_mod.finalize_exam(session)
+    session.refresh_from_db()
+    assert session.status == DailySession.Status.COMPLETED
+    assert session.score == 1
+    assert TelegramAccount.objects.get(user=user).blocked_bot is True

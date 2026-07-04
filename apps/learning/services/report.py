@@ -1,7 +1,12 @@
+import logging
+
+from aiogram.exceptions import TelegramForbiddenError
 from django.utils import timezone
 
 from apps.learning.models import DailySession, ExamQuestion
 from bot.sender import send_daily
+
+logger = logging.getLogger(__name__)
 
 
 def build_report(session: DailySession) -> str:
@@ -32,9 +37,16 @@ def finalize_exam(session: DailySession) -> None:
     session.save(update_fields=["score", "status", "completed_at", "updated_at"])
 
     account = getattr(session.user, "telegram", None)
-    if account is not None and not account.blocked_bot:
+    if account is None or account.blocked_bot:
+        return
+    try:
         send_daily(
             account.telegram_id,
             None,
             [{"caption": build_report(session), "image": None, "audio": None}],
         )
+    except TelegramForbiddenError:
+        account.blocked_bot = True
+        account.save(update_fields=["blocked_bot", "updated_at"])
+    except Exception as exc:
+        logger.warning("failed to send exam report for session %s: %s", session.id, exc)
