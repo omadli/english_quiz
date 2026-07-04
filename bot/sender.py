@@ -44,6 +44,7 @@ async def _send_quiz_poll(
     options: list[str],
     correct_option: int,
     explanation: str | None = None,
+    is_anonymous: bool = False,
 ) -> str:
     msg = await bot.send_poll(
         chat_id=chat_id,
@@ -51,7 +52,7 @@ async def _send_quiz_poll(
         options=options,
         type=PollType.QUIZ,
         correct_option_id=correct_option,
-        is_anonymous=False,
+        is_anonymous=is_anonymous,
         explanation=explanation,
     )
     return msg.poll.id
@@ -63,12 +64,13 @@ def send_quiz_poll(
     options: list[str],
     correct_option: int,
     explanation: str | None = None,
+    is_anonymous: bool = False,
 ) -> str:
     async def _run() -> str:
         bot = _make_bot()
         try:
             return await _send_quiz_poll(
-                bot, chat_id, question, options, correct_option, explanation
+                bot, chat_id, question, options, correct_option, explanation, is_anonymous
             )
         finally:
             await bot.session.close()

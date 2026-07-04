@@ -1,9 +1,12 @@
 import datetime
+import random
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
 
-from apps.learning.models import DailySession, LearningProfile
+from apps.accounts.models import User
+from apps.catalog.models import Word
+from apps.learning.models import DailySession, LearningProfile, WordProgress
 from bot import strings
 
 
@@ -54,3 +57,20 @@ def streak_milestone_message(streak: int) -> str | None:
     if streak in settings.STREAK_MILESTONES:
         return strings.NUDGE_STREAK.format(streak=streak)
     return None
+
+
+def pick_practice_word(learner) -> Word | None:
+    word_ids = list(
+        WordProgress.objects.filter(user=learner).values_list("word_id", flat=True)
+    )
+    if not word_ids:
+        return None
+    return Word.objects.get(pk=random.choice(word_ids))
+
+
+def active_practice_learners() -> list:
+    return list(
+        User.objects.filter(
+            learning_profile__nudges_enabled=True, word_progress__isnull=False
+        ).distinct()
+    )

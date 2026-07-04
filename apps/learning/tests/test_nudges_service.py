@@ -108,3 +108,19 @@ def test_streak_milestone_message():
     assert streak_milestone_message(7) is not None
     assert "7" in streak_milestone_message(7)
     assert streak_milestone_message(8) is None
+
+
+def test_pick_practice_word_and_active_learners():
+    from apps.catalog.models import Book, Unit, Word
+    from apps.learning.models import WordProgress
+    from apps.learning.services.nudges import active_practice_learners, pick_practice_word
+
+    book = Book.objects.create(number=1, title="B1")
+    unit = Unit.objects.create(book=book, number=1, title="U1")
+    word = Word.objects.create(unit=unit, en="apple", uz="olma")
+    u = _learner()
+    assert pick_practice_word(u) is None  # no progress yet
+    assert u not in active_practice_learners()
+    WordProgress.objects.create(user=u, word=word)
+    assert pick_practice_word(u) == word
+    assert u in active_practice_learners()
