@@ -25,3 +25,15 @@ def test_word_changelist_loads(admin_client):
     resp = admin_client.get(reverse("admin:catalog_word_changelist"))
     assert resp.status_code == 200
     assert b"afraid" in resp.content
+
+
+def test_book_changelist_shows_pdf_download(admin_client, settings, tmp_path):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    settings.MEDIA_ROOT = tmp_path
+    Book.objects.create(
+        number=1, title="Book 1", slug="book-1", pdf=SimpleUploadedFile("b.pdf", b"%PDF-x")
+    )
+    resp = admin_client.get(reverse("admin:catalog_book_changelist"))
+    assert resp.status_code == 200
+    assert b"download" in resp.content

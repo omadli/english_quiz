@@ -20,9 +20,15 @@ class WordInline(TabularInline):
 
 @admin.register(Book)
 class BookAdmin(ModelAdmin):
-    list_display = ("number", "title", "level", "word_count", "is_active")
+    list_display = ("number", "title", "level", "word_count", "is_active", "download")
     search_fields = ("title",)
     inlines = (UnitInline,)
+
+    @admin.display(description="PDF")
+    def download(self, obj):
+        if obj.pdf:
+            return format_html('<a href="{}" download>⬇️ PDF</a>', obj.pdf.url)
+        return "—"
 
 
 @admin.register(Unit)
