@@ -171,9 +171,44 @@
       loading(); setHeader(`Unit ${unit.number}`, book.title); setBack(() => showUnits(book));
       const { words } = await getJSON(`api/words/${unit.id}/`);
       if (!words.length) return message("Bu bo'limda so'z topilmadi.");
-      const quizBtn = `<button id="js-quiz" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3 text-center active:scale-[.99] transition">🧩 Mashq — ${Math.min(words.length, 10)} savol</button>`;
-      renderCards(words, quizBtn);
+      const actions = `<div class="grid grid-cols-2 gap-2.5">
+        <button id="js-quiz" class="rounded-2xl bg-accent text-accent-ink font-semibold py-3 text-center active:scale-[.99] transition">🧩 Mashq</button>
+        <button id="js-match" class="rounded-2xl bg-card border border-line font-semibold py-3 text-center active:scale-[.99] transition">🎮 Moslashtirish</button></div>`;
+      renderCards(words, actions);
       document.getElementById("js-quiz").addEventListener("click", () => startQuiz(words, () => showWords(book, unit)));
+      document.getElementById("js-match").addEventListener("click", () => startMatch(words, () => showWords(book, unit)));
+    }
+
+    // ---- matching game (client-side; pair en <-> uz) ----------------------
+    function startMatch(words, back) {
+      const pool = shuffle(words.filter((w) => w.uz)).slice(0, 6);
+      if (pool.length < 3) return message("Moslashtirish uchun so'z yetarli emas.");
+      setBack(back); setHeader("Moslashtirish", "So'zni tarjimasiga ulang");
+      const col = (arr, cls, text) => `<div class="space-y-2.5">${arr.map((w) => `<button class="${cls} w-full rounded-xl bg-card border border-line p-3 text-sm" data-id="${w.id}">${esc(text(w))}</button>`).join("")}</div>`;
+      contentEl.className = "px-4 py-4 pb-20";
+      contentEl.innerHTML = `<div class="grid grid-cols-2 gap-2.5">${col(shuffle(pool.slice()), "js-en font-semibold", (w) => w.en)}${col(shuffle(pool.slice()), "js-uz", (w) => w.uz)}</div>
+        <p id="js-mmsg" class="text-center text-sm text-muted mt-5"></p>`;
+      let sel = null, done = 0;
+      function pick(el, isEn) {
+        if (el.disabled) return;
+        if (isEn) {
+          contentEl.querySelectorAll(".js-en").forEach((b) => b.classList.remove("ring-2", "ring-accent"));
+          sel = el; el.classList.add("ring-2", "ring-accent"); return;
+        }
+        if (!sel) return;
+        if (sel.dataset.id === el.dataset.id) {
+          [sel, el].forEach((b) => { b.disabled = true; b.classList.remove("ring-2", "ring-accent"); b.classList.add("bg-emerald-500/20", "border-emerald-400/40"); });
+          sel = null;
+          if (++done === pool.length) document.getElementById("js-mmsg").textContent = "✅ Barchasi to'g'ri! 🎉";
+        } else {
+          const pair = [sel, el]; pair.forEach((b) => b.classList.add("ring-2", "ring-rose-400"));
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
+          setTimeout(() => pair.forEach((b) => b.classList.remove("ring-2", "ring-rose-400", "ring-accent")), 450);
+          sel = null;
+        }
+      }
+      contentEl.querySelectorAll(".js-en").forEach((el) => el.addEventListener("click", () => pick(el, true)));
+      contentEl.querySelectorAll(".js-uz").forEach((el) => el.addEventListener("click", () => pick(el, false)));
     }
 
     // ---- in-app quiz (client-side; reuses the loaded unit words) ----------
