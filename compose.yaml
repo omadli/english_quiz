@@ -37,7 +37,7 @@ services:
     volumes:
       - ./media:/app/media
     ports:
-      - "8000:8000"
+      - "8001:8000"  # 8000 is taken by another local project
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
