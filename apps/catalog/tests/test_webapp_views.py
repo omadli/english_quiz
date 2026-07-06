@@ -39,6 +39,7 @@ def test_api_units_lists_units_for_book(client):
 def test_api_words_returns_rich_payload(client):
     _, unit = _seed()
     w = client.get(reverse("webapp_words", args=[unit.id])).json()["words"][0]
+    assert isinstance(w["id"], int)
     assert w["en"] == "afraid"
     assert w["uz"] == "qo'rqqan, cho'chigan"
     assert w["part_of_speech"] == "adj."

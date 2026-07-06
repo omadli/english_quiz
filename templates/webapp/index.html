@@ -47,7 +47,8 @@
       "prep.": "bg-cyan-500/15 text-cyan-400",
     };
     const posClass = (p) => POS[p] || "bg-slate-500/15 text-slate-400";
-    const esc = (s) => (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    const esc = (s) => (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((x) => x[1]);
 
     async function getJSON(url) {
       const res = await fetch(url);
@@ -66,119 +67,170 @@
       titleEl.textContent = title;
       subtitleEl.textContent = subtitle;
     }
+    function loading() { contentEl.innerHTML = '<div class="py-16 text-center text-sm text-muted">Yuklanmoqda…</div>'; }
+    function message(text) { contentEl.innerHTML = `<div class="py-16 text-center text-sm text-muted">${esc(text)}</div>`; }
 
-    function loading() {
-      contentEl.innerHTML =
-        '<div class="py-16 text-center text-sm text-muted">Yuklanmoqda…</div>';
+    // ---- learned state ----------------------------------------------------
+    // ponytail: learned words live in Telegram CloudStorage (native, per-user, synced),
+    // sharded into 8 keys to stay under the 4096-char value cap; localStorage fallback
+    // for browser preview. Move to server-side WordProgress only if reports/exams need it.
+    const SHARDS = 8;
+    let learned = new Set();
+
+    function loadLearned(done) {
+      if (tg && tg.CloudStorage) {
+        const keys = Array.from({ length: SHARDS }, (_, i) => "learned_" + i);
+        tg.CloudStorage.getItems(keys, (err, items) => {
+          learned = new Set();
+          if (items) Object.values(items).forEach((v) => (v || "").split(",").filter(Boolean).forEach((x) => learned.add(x)));
+          done && done();
+        });
+      } else {
+        learned = new Set((localStorage.getItem("learned") || "").split(",").filter(Boolean));
+        done && done();
+      }
+    }
+    function toggleLearned(id) {
+      id = String(id);
+      learned.has(id) ? learned.delete(id) : learned.add(id);
+      if (tg && tg.CloudStorage) {
+        const shard = Number(id) % SHARDS;
+        const val = [...learned].filter((x) => Number(x) % SHARDS === shard).join(",");
+        tg.CloudStorage.setItem("learned_" + shard, val);
+      } else {
+        localStorage.setItem("learned", [...learned].join(","));
+      }
+      return learned.has(id);
     }
 
-    function message(text) {
-      contentEl.innerHTML =
-        `<div class="py-16 text-center text-sm text-muted">${esc(text)}</div>`;
-    }
-
+    // ---- word cards -------------------------------------------------------
     function wordCard(w) {
+      const on = learned.has(String(w.id));
       const badge = w.part_of_speech
-        ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>`
-        : "";
-      const ipa = w.pronunciation
-        ? `<span class="text-xs text-muted">${esc(w.pronunciation)}</span>` : "";
-      const img = w.image
-        ? `<img src="${w.image}" alt="" loading="lazy" class="h-16 w-16 rounded-xl object-cover shrink-0" />` : "";
-      const def = w.definition
-        ? `<p class="text-[13px] text-muted leading-snug">${esc(w.definition)}</p>` : "";
-      const ex = w.example
-        ? `<p class="text-[13px] italic leading-snug border-l-2 border-accent pl-2.5 text-ink/90">${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
-      const ctx = (w.book && w.unit)
-        ? `<span class="text-[11px] text-muted">Kitob ${w.book} · Unit ${w.unit}</span>` : "";
-      return (
-        `<article class="rounded-2xl bg-card border border-line shadow-card overflow-hidden">
+        ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>` : "";
+      const ipa = w.pronunciation ? `<span class="text-xs text-muted">${esc(w.pronunciation)}</span>` : "";
+      const img = w.image ? `<img src="${w.image}" alt="" loading="lazy" class="h-16 w-16 rounded-xl object-cover shrink-0" />` : "";
+      const def = w.definition ? `<p class="text-[13px] text-muted leading-snug">${esc(w.definition)}</p>` : "";
+      const ex = w.example ? `<p class="text-[13px] italic leading-snug border-l-2 border-accent pl-2.5">${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
+      const ctx = (w.book && w.unit) ? `<span class="text-[11px] text-muted">Kitob ${w.book} · Unit ${w.unit}</span>` : "";
+      const learnBtn = `<button data-id="${w.id}" class="js-learn shrink-0 grid h-8 w-8 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+      return `<article class="js-card rounded-2xl bg-card border border-line shadow-card overflow-hidden ${on ? "opacity-60" : ""}">
           <div class="flex gap-3 p-3.5">
             ${img}
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-lg font-bold tracking-tight">${esc(w.en)}</h3>
-                ${badge}
+                <h3 class="text-lg font-bold tracking-tight">${esc(w.en)}</h3>${badge}
               </div>
               <div class="flex items-center gap-2">${ipa}${ctx}</div>
               <p class="text-[15px] font-medium mt-1 text-ink">${esc(w.uz) || "—"}</p>
             </div>
+            ${learnBtn}
           </div>
           ${(def || ex) ? `<div class="px-3.5 pb-3.5 space-y-1.5">${def}${ex}</div>` : ""}
-        </article>`
-      );
+        </article>`;
     }
 
+    function renderCards(words, prefixHTML) {
+      contentEl.className = "px-4 py-4 pb-20 space-y-3";
+      contentEl.innerHTML = (prefixHTML || "") + words.map(wordCard).join("");
+      contentEl.querySelectorAll(".js-learn").forEach((el) => el.addEventListener("click", () => {
+        const on = toggleLearned(el.dataset.id);
+        el.className = `js-learn shrink-0 grid h-8 w-8 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}`;
+        el.closest(".js-card").classList.toggle("opacity-60", on);
+      }));
+    }
+
+    // ---- navigation -------------------------------------------------------
     async function showBooks() {
-      loading();
-      setHeader("Kitoblar", "4000 Essential Words");
-      setBack(null);
+      loading(); setHeader("Kitoblar", "4000 Essential Words"); setBack(null);
       const { books } = await getJSON("api/books/");
       if (!books.length) return message("Hozircha kitob qo'shilmagan.");
+      contentEl.className = "px-4 py-4 pb-20 space-y-3";
       contentEl.innerHTML = books.map((b) => (
         `<button data-id="${b.id}" data-title="${esc(b.title)}"
           class="js-book w-full flex items-center gap-3 rounded-2xl bg-card border border-line p-3.5 text-left active:scale-[.99] transition">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink font-bold">${b.number}</span>
-          <span class="min-w-0 flex-1">
-            <span class="block font-semibold truncate">${esc(b.title)}</span>
-            <span class="block text-xs text-muted">${b.word_count} so'z</span>
-          </span>
+          <span class="min-w-0 flex-1"><span class="block font-semibold truncate">${esc(b.title)}</span><span class="block text-xs text-muted">${b.word_count} so'z</span></span>
           <svg class="h-5 w-5 text-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>`
       )).join("");
-      contentEl.querySelectorAll(".js-book").forEach((el) =>
-        el.addEventListener("click", () => showUnits({ id: el.dataset.id, title: el.dataset.title }))
-      );
+      contentEl.querySelectorAll(".js-book").forEach((el) => el.addEventListener("click", () => showUnits({ id: el.dataset.id, title: el.dataset.title })));
     }
 
     async function showUnits(book) {
-      loading();
-      setHeader(book.title, "Bo'limni tanlang");
-      setBack(showBooks);
+      loading(); setHeader(book.title, "Bo'limni tanlang"); setBack(showBooks);
       const { units } = await getJSON(`api/units/${book.id}/`);
       if (!units.length) return message("Bu kitobda bo'lim yo'q.");
       contentEl.className = "px-4 py-4 pb-20 grid grid-cols-4 gap-2.5";
-      contentEl.innerHTML = units.map((u) => (
-        `<button data-id="${u.id}" data-n="${u.number}"
-          class="js-unit aspect-square grid place-items-center rounded-2xl bg-card border border-line text-lg font-bold active:scale-95 transition">${u.number}</button>`
-      )).join("");
-      contentEl.querySelectorAll(".js-unit").forEach((el) =>
-        el.addEventListener("click", () => showWords(book, { id: el.dataset.id, number: el.dataset.n }))
-      );
+      contentEl.innerHTML = units.map((u) => `<button data-id="${u.id}" data-n="${u.number}" class="js-unit aspect-square grid place-items-center rounded-2xl bg-card border border-line text-lg font-bold active:scale-95 transition">${u.number}</button>`).join("");
+      contentEl.querySelectorAll(".js-unit").forEach((el) => el.addEventListener("click", () => showWords(book, { id: el.dataset.id, number: el.dataset.n })));
     }
 
     async function showWords(book, unit) {
-      loading();
-      contentEl.className = "px-4 py-4 pb-20 space-y-3";
-      setHeader(`Unit ${unit.number}`, book.title);
-      setBack(() => showUnits(book));
+      loading(); setHeader(`Unit ${unit.number}`, book.title); setBack(() => showUnits(book));
       const { words } = await getJSON(`api/words/${unit.id}/`);
       if (!words.length) return message("Bu bo'limda so'z topilmadi.");
-      contentEl.innerHTML = words.map(wordCard).join("");
+      const quizBtn = `<button id="js-quiz" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3 text-center active:scale-[.99] transition">🧩 Mashq — ${Math.min(words.length, 10)} savol</button>`;
+      renderCards(words, quizBtn);
+      document.getElementById("js-quiz").addEventListener("click", () => startQuiz(words, () => showWords(book, unit)));
     }
 
-    // ---- live search -------------------------------------------------------
-    let searchTimer = null;
-    let searchActive = false;
+    // ---- in-app quiz (client-side; reuses the loaded unit words) ----------
+    function startQuiz(words, back) {
+      const pool = words.filter((w) => w.uz);
+      if (pool.length < 4) return message("Mashq uchun so'z yetarli emas.");
+      const qs = shuffle(pool).slice(0, 10);
+      let i = 0, score = 0;
+      setBack(back);
 
+      function render() {
+        if (i >= qs.length) return result();
+        const w = qs[i];
+        const distractors = shuffle(pool.filter((x) => x.uz !== w.uz)).slice(0, 3).map((x) => x.uz);
+        const opts = shuffle([w.uz, ...distractors]);
+        setHeader(`Savol ${i + 1}/${qs.length}`, `Ball: ${score}`);
+        contentEl.className = "px-4 py-6 pb-20 space-y-3";
+        contentEl.innerHTML =
+          `<div class="text-center mb-3"><div class="text-2xl font-bold tracking-tight">${esc(w.en)}</div><div class="text-xs text-muted">${esc(w.part_of_speech || "")}</div></div>` +
+          opts.map((o) => `<button class="js-opt w-full rounded-2xl bg-card border border-line p-3.5 text-left text-[15px]" data-uz="${esc(o)}">${esc(o)}</button>`).join("");
+        contentEl.querySelectorAll(".js-opt").forEach((el) => el.addEventListener("click", () => {
+          if (el.dataset.answered) return;
+          const correct = el.dataset.uz === w.uz;
+          if (correct) score++;
+          contentEl.querySelectorAll(".js-opt").forEach((b) => {
+            b.dataset.answered = "1";
+            if (b.dataset.uz === w.uz) b.classList.add("ring-2", "ring-emerald-400");
+            else if (b === el) b.classList.add("ring-2", "ring-rose-400");
+          });
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(correct ? "success" : "error");
+          setTimeout(() => { i++; render(); }, 750);
+        }));
+      }
+
+      function result() {
+        setHeader("Natija", "Mashq tugadi");
+        contentEl.className = "px-4 py-16 pb-20 text-center space-y-4";
+        contentEl.innerHTML =
+          `<div class="text-5xl font-bold tracking-tight">${score}/${qs.length}</div>
+           <p class="text-sm text-muted">${score === qs.length ? "Zo'r! 🎉" : "Yaxshi — yana urinib ko'ring 💪"}</p>
+           <button id="js-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`;
+        document.getElementById("js-again").addEventListener("click", () => startQuiz(words, back));
+      }
+      render();
+    }
+
+    // ---- live search ------------------------------------------------------
+    let searchTimer = null, searchActive = false;
     async function runSearch(q) {
       const { words } = await getJSON(`api/search/?q=${encodeURIComponent(q)}`);
       if (!searchActive) return;
-      contentEl.className = "px-4 py-4 pb-20 space-y-3";
       setHeader("Qidiruv", `"${q}" — ${words.length} natija`);
       setBack(exitSearch);
-      contentEl.innerHTML = words.length
-        ? words.map(wordCard).join("")
-        : '<div class="py-16 text-center text-sm text-muted">Hech narsa topilmadi.</div>';
+      if (!words.length) return message("Hech narsa topilmadi.");
+      renderCards(words);
     }
-
-    function exitSearch() {
-      searchActive = false;
-      searchEl.value = "";
-      contentEl.className = "px-4 py-4 pb-20 space-y-3";
-      showBooks();
-    }
-
+    function exitSearch() { searchActive = false; searchEl.value = ""; showBooks(); }
     searchEl.addEventListener("input", () => {
       const q = searchEl.value.trim();
       clearTimeout(searchTimer);
@@ -187,7 +239,7 @@
       searchTimer = setTimeout(() => runSearch(q), 220);
     });
 
-    showBooks().catch(() => message("Xatolik yuz berdi. Sahifani qayta oching."));
+    loadLearned(() => showBooks().catch(() => message("Xatolik yuz berdi. Sahifani qayta oching.")));
   </script>
 </body>
 </html>

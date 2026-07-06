@@ -7,6 +7,7 @@ from apps.catalog.models import Book, Unit, Word
 
 def _word_payload(w: Word, with_context: bool = False) -> dict:
     data = {
+        "id": w.id,
         "en": w.en,
         "uz": w.uz,
         "part_of_speech": w.part_of_speech,
