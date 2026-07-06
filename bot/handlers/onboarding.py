@@ -21,7 +21,11 @@ router = Router()
 
 
 def _fmt_time(value: object) -> str:
-    return f"{value:%H:%M}" if value else "—"
+    if not value:
+        return "—"
+    if isinstance(value, str):  # FSM stores times as "HH:MM" strings
+        return value
+    return f"{value:%H:%M}"
 
 
 def format_summary(data: dict) -> str:
@@ -84,7 +88,8 @@ async def pick_morning(callback: CallbackQuery, state: FSMContext) -> None:
     if value == "other":
         await callback.message.edit_text(strings.ASK_MORNING)
         return
-    await state.update_data(morning_time=parse_time(value))
+    # Store the "HH:MM" string, not a time() — FSM Redis storage is JSON-serialized.
+    await state.update_data(morning_time=value)
     await state.set_state(OnboardingStates.exam)
     await callback.message.edit_text(strings.ASK_EXAM, reply_markup=exam_keyboard())
 
@@ -95,7 +100,7 @@ async def typed_morning(message: Message, state: FSMContext) -> None:
     if value is None:
         await message.answer(strings.INVALID_TIME)
         return
-    await state.update_data(morning_time=value)
+    await state.update_data(morning_time=f"{value:%H:%M}")
     await state.set_state(OnboardingStates.exam)
     await message.answer(strings.ASK_EXAM, reply_markup=exam_keyboard())
 
@@ -107,7 +112,7 @@ async def pick_exam(callback: CallbackQuery, state: FSMContext) -> None:
     if value == "other":
         await callback.message.edit_text(strings.ASK_EXAM)
         return
-    await state.update_data(exam_time=parse_time(value))
+    await state.update_data(exam_time=value)
     await state.set_state(OnboardingStates.audio)
     await callback.message.edit_text(strings.ASK_AUDIO, reply_markup=audio_keyboard())
 
@@ -118,7 +123,7 @@ async def typed_exam(message: Message, state: FSMContext) -> None:
     if value is None:
         await message.answer(strings.INVALID_TIME)
         return
-    await state.update_data(exam_time=value)
+    await state.update_data(exam_time=f"{value:%H:%M}")
     await state.set_state(OnboardingStates.audio)
     await message.answer(strings.ASK_AUDIO, reply_markup=audio_keyboard())
 

@@ -1,4 +1,5 @@
 import datetime
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 from aiogram.fsm.context import FSMContext
@@ -47,9 +48,12 @@ async def test_edit_audio_seeds_all_fields():
     state = _state()
     await st.edit_audio(callback, state, profile=_profile())
     data = await state.get_data()
+    # Seeded state is JSON-serialized by the production RedisStorage; the
+    # profile's TimeField values must be seeded as "HH:MM" strings.
+    json.dumps(data)
     assert data["words_per_session"] == 10
     assert data["study_weekdays"] == [0, 1, 2]
-    assert data["morning_time"] == datetime.time(7, 0)
-    assert data["exam_time"] == datetime.time(20, 0)
+    assert data["morning_time"] == "07:00"
+    assert data["exam_time"] == "20:00"
     assert data["audio_enabled"] is True
     assert data["audio_repeat"] == 2

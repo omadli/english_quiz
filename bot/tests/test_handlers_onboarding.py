@@ -1,4 +1,5 @@
 import datetime
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiogram.fsm.context import FSMContext
@@ -48,7 +49,11 @@ async def test_pick_morning_preset_advances_to_exam():
     state = _state()
     await state.set_state(OnboardingStates.morning)
     await ob.pick_morning(_cb("onb:mt:06:00"), state)
-    assert (await state.get_data())["morning_time"] == datetime.time(6, 0)
+    data = await state.get_data()
+    # FSM state is JSON-serialized by the production RedisStorage, so times
+    # must be stored as "HH:MM" strings, never datetime.time objects.
+    json.dumps(data)
+    assert data["morning_time"] == "06:00"
     assert await state.get_state() == OnboardingStates.exam.state
 
 
@@ -58,8 +63,20 @@ async def test_typed_morning_time_valid_advances():
     msg = AsyncMock()
     msg.text = "06:45"
     await ob.typed_morning(msg, state)
-    assert (await state.get_data())["morning_time"] == datetime.time(6, 45)
+    data = await state.get_data()
+    json.dumps(data)
+    assert data["morning_time"] == "06:45"
     assert await state.get_state() == OnboardingStates.exam.state
+
+
+async def test_pick_exam_preset_stores_json_serializable_string():
+    state = _state()
+    await state.set_state(OnboardingStates.exam)
+    await ob.pick_exam(_cb("onb:et:20:00"), state)
+    data = await state.get_data()
+    json.dumps(data)
+    assert data["exam_time"] == "20:00"
+    assert await state.get_state() == OnboardingStates.audio.state
 
 
 async def test_typed_morning_time_invalid_reprompts():

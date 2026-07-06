@@ -79,6 +79,20 @@ def test_apply_wizard_data_sets_fields_and_onboards():
     assert profile.current_book is not None
 
 
+def test_apply_wizard_data_accepts_string_times_from_fsm():
+    """FSM stores times as 'HH:MM' strings; apply_wizard_data must persist real time()."""
+    import datetime
+
+    Book.objects.create(number=1, title="Book 1", slug="book-1")
+    _, profile, _ = get_or_create_user(
+        telegram_id=7, username="", first_name="A", last_name="", language_code=""
+    )
+    apply_wizard_data(profile, {"morning_time": "06:30", "exam_time": "21:00"})
+    profile.refresh_from_db()
+    assert profile.morning_time == datetime.time(6, 30)
+    assert profile.exam_time == datetime.time(21, 0)
+
+
 def test_apply_wizard_data_does_not_reset_position_when_already_onboarded():
     book = Book.objects.create(number=1, title="Book 1", slug="book-1")
     Unit.objects.create(book=book, number=1)

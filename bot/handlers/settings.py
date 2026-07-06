@@ -47,8 +47,9 @@ async def _seed_profile(state: FSMContext, profile: LearningProfile) -> None:
     await state.update_data(
         words_per_session=profile.words_per_session,
         study_weekdays=list(profile.study_weekdays),
-        morning_time=profile.morning_time,
-        exam_time=profile.exam_time,
+        # "HH:MM" strings — FSM Redis storage is JSON-serialized (time() is not).
+        morning_time=f"{profile.morning_time:%H:%M}",
+        exam_time=f"{profile.exam_time:%H:%M}",
         audio_enabled=profile.audio_enabled,
         audio_repeat=profile.audio_repeat,
     )
