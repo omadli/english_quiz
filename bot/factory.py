@@ -9,11 +9,14 @@ from bot.handlers import (
     common,
     group_quiz,
     leaderboard,
+    menu,
     onboarding,
     quiz,
+    quiz_practice,
     relations,
     settings,
     start,
+    words,
 )
 from bot.middlewares.user import UserMiddleware
 
@@ -35,4 +38,7 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(relations.router)
     dp.include_router(leaderboard.router)
     dp.include_router(books.router)
+    dp.include_router(menu.router)
+    dp.include_router(words.router)
+    dp.include_router(quiz_practice.router)
     return dp

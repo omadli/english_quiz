@@ -57,6 +57,7 @@ TEACHER_LINK = (
 HELP_TEXT = (
     "Buyruqlar:\n"
     "/start — boshlash / qayta ishga tushirish\n"
+    "/menu — asosiy menyu (test, so'zlar, kitoblar, reyting)\n"
     "/settings — o'quv sozlamalarini ko'rish va o'zgartirish\n"
     "/cancel — joriy amalni bekor qilish\n"
     "/help — yordam"
@@ -80,3 +81,40 @@ PICK_BOOK_PDF = "📚 Qaysi kitobni PDF sifatida yuklab olasiz?"
 NO_BOOKS = "Hozircha kitob mavjud emas."
 PDF_SENDING = "⏳ Tayyorlanmoqda..."
 PDF_ERROR = "Kechirasiz, PDF yuborishda xatolik yuz berdi."
+PDF_NOT_AVAILABLE = "Bu kitob uchun PDF hozircha mavjud emas."
+
+# Main menu (persistent reply keyboard)
+MENU_TEST = "🧠 Test / Quiz"
+MENU_WORDS = "📖 So'zlar ro'yxati"
+MENU_BOOKS = "📚 Kitoblar"
+MENU_GROUP_QUIZ = "👥 Guruh quizi"
+MENU_TOP = "🏆 Reyting"
+MENU_SETTINGS = "⚙️ Sozlamalar"
+MENU_WEBAPP = "🌐 Mini App"
+MENU_OPENED = "Asosiy menyu 👇"
+
+GROUP_QUIZ_INFO = (
+    "👥 <b>Guruh quizi</b>\n\n"
+    "Guruhda quiz o'ynash uchun:\n"
+    "1. Botni guruhingizga qo'shing va <b>admin</b> qiling.\n"
+    "2. @BotFather'da <code>/setprivacy</code> → <b>Disable</b> qiling.\n"
+    "3. Guruh admini <code>/quiz</code> yuborib, sehrgardan o'tsin.\n\n"
+    "<code>/stop</code> — ketayotgan testni to'xtatadi."
+)
+GROUP_QUIZ_ADD_BTN = "➕ Botni guruhga qo'shish"
+
+# Word list browser
+WORDS_PICK_BOOK = "📖 Qaysi kitob so'zlarini ko'rasiz?"
+WORDS_PICK_UNIT = "Qaysi bo'limdagi (unit) so'zlarni ko'rasiz?"
+WORDS_EMPTY = "Bu bo'limda so'z topilmadi."
+WORDS_HEADER = "📖 <b>{book} — Unit {unit}</b>\n"
+BTN_BACK = "⬅️ Orqaga"
+BTN_PREV = "⬅️"
+BTN_NEXT = "➡️"
+
+# Personal practice quiz
+QUIZ_PICK_BOOK = "🧠 Qaysi kitobdan mashq qilamiz?"
+QUIZ_PICK_UNIT = "Qaysi bo'limdan (unit) savollar bo'lsin?"
+QUIZ_NO_WORDS = "Bu bo'limda savol tuzishga so'z yetarli emas."
+QUIZ_STARTING = "🧠 <b>{count} ta savol</b> yuborilyapti — har biriga javob belgilang. Omad! 💪"
+QUIZ_DONE = "✅ Mashq tugadi! Yana urinib ko'rish uchun 🧠 Test / Quiz bosing."

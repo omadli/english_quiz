@@ -84,6 +84,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]  # holds the Tailwind build output (css/app.css)
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
@@ -107,6 +108,10 @@ TTS_PROVIDER = env("TTS_PROVIDER", default="apps.common.tts.GTTSProvider")
 
 # Telegram (Phase 1+)
 BOT_TOKEN = env("BOT_TOKEN", default="")
+
+# Telegram Mini App (web app) — public https URL of the mini app page.
+# The menu shows a WebApp button only when this is set (Telegram requires https).
+WEBAPP_URL = env("WEBAPP_URL", default="")
 
 # Evening exam (Phase 2b)
 EXAM_WINDOW_MINUTES = env.int("EXAM_WINDOW_MINUTES", default=60)

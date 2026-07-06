@@ -5,6 +5,7 @@ from asgiref.sync import sync_to_async
 
 from apps.learning.models import LearningProfile
 from bot import strings
+from bot.handlers.menu import show_menu
 from bot.keyboards.onboarding import (
     audio_keyboard,
     audio_repeat_keyboard,
@@ -161,3 +162,4 @@ async def save_wizard(callback: CallbackQuery, state: FSMContext, profile: Learn
     await sync_to_async(apply_wizard_data)(profile, data)
     await state.clear()
     await callback.message.edit_text(strings.ONBOARD_DONE)
+    await show_menu(callback.message)

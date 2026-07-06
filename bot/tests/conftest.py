@@ -26,11 +26,14 @@ def _detach_handler_routers():
         common,
         group_quiz,
         leaderboard,
+        menu,
         onboarding,
         quiz,
+        quiz_practice,
         relations,
         settings,
         start,
+        words,
     )
 
     for module in (
@@ -38,11 +41,14 @@ def _detach_handler_routers():
         common,
         group_quiz,
         leaderboard,
+        menu,
         onboarding,
         quiz,
+        quiz_practice,
         relations,
         settings,
         start,
+        words,
     ):
         router = module.router
         parent = router.parent_router

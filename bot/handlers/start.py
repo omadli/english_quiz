@@ -10,6 +10,7 @@ from apps.accounts.models import User
 from apps.learning.models import LearningProfile, default_weekdays
 from apps.relations.services.referral import redeem_token
 from bot import strings
+from bot.handlers.menu import menu_keyboard, show_menu
 from bot.keyboards.onboarding import intro_keyboard, words_keyboard
 from bot.services.users import set_starting_position, update_profile
 from bot.states.onboarding import OnboardingStates
@@ -41,7 +42,7 @@ async def cmd_start(
         if guardianship is not None:
             await message.answer(strings.LINKED_OK)
     if profile.onboarded:
-        await message.answer(strings.WELCOME_BACK)
+        await message.answer(strings.WELCOME_BACK, reply_markup=menu_keyboard())
         return
     await message.answer(strings.WELCOME_NEW, reply_markup=intro_keyboard())
 
@@ -62,3 +63,4 @@ async def use_defaults(
     await sync_to_async(set_starting_position)(profile)
     await state.clear()
     await callback.message.edit_text(strings.ONBOARD_DONE)
+    await show_menu(callback.message)
