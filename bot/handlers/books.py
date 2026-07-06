@@ -29,6 +29,7 @@ async def send_pdf(callback: CallbackQuery) -> None:
     book_id = int(callback.data.split(":")[-1])
     doc = await sync_to_async(get_book_document)(book_id)
     if doc is None:
+        await callback.message.answer(strings.PDF_NOT_AVAILABLE)
         return
     filename, data = doc
     try:
