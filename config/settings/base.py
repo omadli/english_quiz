@@ -109,6 +109,13 @@ TTS_PROVIDER = env("TTS_PROVIDER", default="apps.common.tts.GTTSProvider")
 # Telegram (Phase 1+)
 BOT_TOKEN = env("BOT_TOKEN", default="")
 
+# Bot run mode: "polling" (default) or "webhook". Webhook needs a public https
+# WEBHOOK_URL; the container listens on WEBHOOK_PORT behind your reverse proxy.
+BOT_MODE = env("BOT_MODE", default="polling")
+WEBHOOK_URL = env("WEBHOOK_URL", default="")
+WEBHOOK_SECRET = env("WEBHOOK_SECRET", default="")
+WEBHOOK_PORT = env.int("WEBHOOK_PORT", default=8080)
+
 # Telegram Mini App (web app) — public https URL of the mini app page.
 # The menu shows a WebApp button only when this is set (Telegram requires https).
 WEBAPP_URL = env("WEBAPP_URL", default="")
