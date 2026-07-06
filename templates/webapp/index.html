@@ -1,0 +1,193 @@
+{% load static %}
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <title>4000 Essential Words</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+</head>
+<body class="font-sans antialiased">
+  <header class="sticky top-0 z-20 bg-surface border-b border-line">
+    <div class="px-4 pt-3 pb-2">
+      <h1 id="title" class="text-[19px] font-bold tracking-tight leading-tight">Kitoblar</h1>
+      <p id="subtitle" class="text-xs text-muted mt-0.5">4000 Essential Words</p>
+    </div>
+    <div class="px-4 pb-3">
+      <label class="flex items-center gap-2.5 rounded-2xl bg-card border border-line px-3.5 py-2.5">
+        <svg class="h-4 w-4 text-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" stroke-linecap="round" />
+        </svg>
+        <input id="search" type="search" enterkeyhint="search" autocomplete="off"
+               placeholder="So'z qidirish — en yoki uz…"
+               class="w-full bg-transparent outline-none text-[15px] text-ink placeholder:text-muted" />
+      </label>
+    </div>
+  </header>
+
+  <main id="content" class="px-4 py-4 pb-20 space-y-3"></main>
+
+  <script>
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg) { tg.ready(); tg.expand(); }
+
+    const titleEl = document.getElementById("title");
+    const subtitleEl = document.getElementById("subtitle");
+    const contentEl = document.getElementById("content");
+    const searchEl = document.getElementById("search");
+
+    const POS = {
+      "n.": "bg-blue-500/15 text-blue-400",
+      "v.": "bg-emerald-500/15 text-emerald-400",
+      "adj.": "bg-amber-500/15 text-amber-400",
+      "adv.": "bg-rose-500/15 text-rose-400",
+      "pron.": "bg-violet-500/15 text-violet-400",
+      "prep.": "bg-cyan-500/15 text-cyan-400",
+    };
+    const posClass = (p) => POS[p] || "bg-slate-500/15 text-slate-400";
+    const esc = (s) => (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+    async function getJSON(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(res.status);
+      return res.json();
+    }
+
+    function setBack(fn) {
+      if (!tg || !tg.BackButton) return;
+      tg.BackButton.offClick();
+      if (fn) { tg.BackButton.onClick(fn); tg.BackButton.show(); }
+      else { tg.BackButton.hide(); }
+    }
+
+    function setHeader(title, subtitle) {
+      titleEl.textContent = title;
+      subtitleEl.textContent = subtitle;
+    }
+
+    function loading() {
+      contentEl.innerHTML =
+        '<div class="py-16 text-center text-sm text-muted">Yuklanmoqda…</div>';
+    }
+
+    function message(text) {
+      contentEl.innerHTML =
+        `<div class="py-16 text-center text-sm text-muted">${esc(text)}</div>`;
+    }
+
+    function wordCard(w) {
+      const badge = w.part_of_speech
+        ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>`
+        : "";
+      const ipa = w.pronunciation
+        ? `<span class="text-xs text-muted">${esc(w.pronunciation)}</span>` : "";
+      const img = w.image
+        ? `<img src="${w.image}" alt="" loading="lazy" class="h-16 w-16 rounded-xl object-cover shrink-0" />` : "";
+      const def = w.definition
+        ? `<p class="text-[13px] text-muted leading-snug">${esc(w.definition)}</p>` : "";
+      const ex = w.example
+        ? `<p class="text-[13px] italic leading-snug border-l-2 border-accent pl-2.5 text-ink/90">${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
+      const ctx = (w.book && w.unit)
+        ? `<span class="text-[11px] text-muted">Kitob ${w.book} · Unit ${w.unit}</span>` : "";
+      return (
+        `<article class="rounded-2xl bg-card border border-line shadow-card overflow-hidden">
+          <div class="flex gap-3 p-3.5">
+            ${img}
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-lg font-bold tracking-tight">${esc(w.en)}</h3>
+                ${badge}
+              </div>
+              <div class="flex items-center gap-2">${ipa}${ctx}</div>
+              <p class="text-[15px] font-medium mt-1 text-ink">${esc(w.uz) || "—"}</p>
+            </div>
+          </div>
+          ${(def || ex) ? `<div class="px-3.5 pb-3.5 space-y-1.5">${def}${ex}</div>` : ""}
+        </article>`
+      );
+    }
+
+    async function showBooks() {
+      loading();
+      setHeader("Kitoblar", "4000 Essential Words");
+      setBack(null);
+      const { books } = await getJSON("api/books/");
+      if (!books.length) return message("Hozircha kitob qo'shilmagan.");
+      contentEl.innerHTML = books.map((b) => (
+        `<button data-id="${b.id}" data-title="${esc(b.title)}"
+          class="js-book w-full flex items-center gap-3 rounded-2xl bg-card border border-line p-3.5 text-left active:scale-[.99] transition">
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink font-bold">${b.number}</span>
+          <span class="min-w-0 flex-1">
+            <span class="block font-semibold truncate">${esc(b.title)}</span>
+            <span class="block text-xs text-muted">${b.word_count} so'z</span>
+          </span>
+          <svg class="h-5 w-5 text-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>`
+      )).join("");
+      contentEl.querySelectorAll(".js-book").forEach((el) =>
+        el.addEventListener("click", () => showUnits({ id: el.dataset.id, title: el.dataset.title }))
+      );
+    }
+
+    async function showUnits(book) {
+      loading();
+      setHeader(book.title, "Bo'limni tanlang");
+      setBack(showBooks);
+      const { units } = await getJSON(`api/units/${book.id}/`);
+      if (!units.length) return message("Bu kitobda bo'lim yo'q.");
+      contentEl.className = "px-4 py-4 pb-20 grid grid-cols-4 gap-2.5";
+      contentEl.innerHTML = units.map((u) => (
+        `<button data-id="${u.id}" data-n="${u.number}"
+          class="js-unit aspect-square grid place-items-center rounded-2xl bg-card border border-line text-lg font-bold active:scale-95 transition">${u.number}</button>`
+      )).join("");
+      contentEl.querySelectorAll(".js-unit").forEach((el) =>
+        el.addEventListener("click", () => showWords(book, { id: el.dataset.id, number: el.dataset.n }))
+      );
+    }
+
+    async function showWords(book, unit) {
+      loading();
+      contentEl.className = "px-4 py-4 pb-20 space-y-3";
+      setHeader(`Unit ${unit.number}`, book.title);
+      setBack(() => showUnits(book));
+      const { words } = await getJSON(`api/words/${unit.id}/`);
+      if (!words.length) return message("Bu bo'limda so'z topilmadi.");
+      contentEl.innerHTML = words.map(wordCard).join("");
+    }
+
+    // ---- live search -------------------------------------------------------
+    let searchTimer = null;
+    let searchActive = false;
+
+    async function runSearch(q) {
+      const { words } = await getJSON(`api/search/?q=${encodeURIComponent(q)}`);
+      if (!searchActive) return;
+      contentEl.className = "px-4 py-4 pb-20 space-y-3";
+      setHeader("Qidiruv", `"${q}" — ${words.length} natija`);
+      setBack(exitSearch);
+      contentEl.innerHTML = words.length
+        ? words.map(wordCard).join("")
+        : '<div class="py-16 text-center text-sm text-muted">Hech narsa topilmadi.</div>';
+    }
+
+    function exitSearch() {
+      searchActive = false;
+      searchEl.value = "";
+      contentEl.className = "px-4 py-4 pb-20 space-y-3";
+      showBooks();
+    }
+
+    searchEl.addEventListener("input", () => {
+      const q = searchEl.value.trim();
+      clearTimeout(searchTimer);
+      if (q.length < 2) { if (searchActive) exitSearch(); return; }
+      searchActive = true;
+      searchTimer = setTimeout(() => runSearch(q), 220);
+    });
+
+    showBooks().catch(() => message("Xatolik yuz berdi. Sahifani qayta oching."));
+  </script>
+</body>
+</html>

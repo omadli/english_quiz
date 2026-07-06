@@ -134,3 +134,6 @@ dmypy.json
 
 # database files
 db.sqlite3
+
+# Tailwind build output (generated in Docker via the standalone CLI)
+/static/css/app.css

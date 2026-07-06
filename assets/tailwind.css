@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --surface: var(--tg-theme-bg-color, #0e1013);
+    --card: var(--tg-theme-secondary-bg-color, #191c22);
+    --ink: var(--tg-theme-text-color, #eef1f6);
+    --muted: var(--tg-theme-hint-color, #8b93a3);
+    --line: rgba(130, 140, 160, 0.16);
+    --accent: var(--tg-theme-button-color, #6c5ce7);
+    --accent-ink: var(--tg-theme-button-text-color, #ffffff);
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--surface);
+    color: var(--ink);
+  }
+}
