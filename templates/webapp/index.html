@@ -159,12 +159,12 @@
     // ---- KITOBLAR tab ------------------------------------------------------
     function bookCard(b) {
       const grad = BOOK_GRAD[(b.number - 1) % BOOK_GRAD.length];
+      const inner = b.cover
+        ? `<img src="${b.cover}" alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover" />`
+        : `<span class="text-white/90 text-3xl font-black">${b.number}</span><span class="text-white text-[13px] font-semibold leading-tight line-clamp-3">${esc(b.title)}</span>`;
       return `<button data-id="${b.id}" data-num="${b.number}" data-title="${esc(b.title)}" data-pdf="${b.pdf || ""}" class="js-book text-left">
-        <div class="aspect-[3/4] rounded-2xl bg-gradient-to-br ${grad} p-3 flex flex-col justify-between shadow-card">
-          <span class="text-white/90 text-3xl font-black">${b.number}</span>
-          <span class="text-white text-[13px] font-semibold leading-tight line-clamp-3">${esc(b.title)}</span>
-        </div>
-        <span class="block mt-1.5 text-[11px] text-muted text-center">${b.word_count} so'z</span>
+        <div class="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br ${grad} p-3 flex flex-col justify-between shadow-card">${inner}</div>
+        <span class="block mt-1.5 text-[11px] font-medium text-center leading-tight line-clamp-2">${esc(b.title)}</span>
       </button>`;
     }
     async function showBooks() {
