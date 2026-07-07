@@ -127,31 +127,37 @@
     const speakerSvg = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a9 9 0 0 1 0 12" stroke-linecap="round"/></svg>';
     const checkSvg = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+    const learnCls = (on) => `js-learn shrink-0 grid h-7 w-7 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}`;
     function wordCard(w) {
       const on = learned.has(String(w.id));
-      const badge = w.part_of_speech ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>` : "";
-      const ipa = w.pronunciation ? `<span class="text-xs text-muted">${esc(w.pronunciation)}</span>` : "";
+      const badge = w.part_of_speech ? `<span class="inline-flex items-center rounded-full px-1.5 text-[10px] font-bold uppercase ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>` : "";
+      const ipa = w.pronunciation ? `<span class="text-[11px] text-muted">${esc(w.pronunciation)}</span>` : "";
       const def = w.definition ? `<p class="text-[13px] text-muted leading-snug">${esc(w.definition)}</p>` : "";
       const ex = w.example ? `<p class="text-[13px] italic leading-snug border-l-2 border-accent pl-2.5">${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
       const ctx = (w.book && w.unit) ? `<span class="text-[11px] text-muted">Kitob ${w.book} · Unit ${w.unit}</span>` : "";
-      return `<article class="js-card rounded-2xl bg-card border border-line shadow-card overflow-hidden ${on ? "opacity-60" : ""}">
-        <div class="flex gap-2.5 p-3.5 items-start">
-          <button data-en="${esc(w.en)}" class="js-speak shrink-0 grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent">${speakerSvg}</button>
+      const hasDetail = ipa || def || ex || ctx;
+      return `<article class="js-card rounded-xl bg-card border border-line overflow-hidden ${on ? "opacity-60" : ""}">
+        <div class="js-top flex items-center gap-2.5 px-3 py-2">
+          <button data-en="${esc(w.en)}" class="js-speak shrink-0 grid h-8 w-8 place-items-center rounded-full bg-accent/10 text-accent">${speakerSvg}</button>
           <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold tracking-tight">${esc(w.en)}</h3>${badge}</div>
-            <div class="flex items-center gap-2">${ipa}${ctx}</div>
-            <p class="text-[15px] font-medium mt-1 text-ink">${esc(w.uz) || "—"}</p>
+            <div class="flex items-center gap-1.5"><h3 class="text-[15px] font-bold truncate">${esc(w.en)}</h3>${badge}</div>
+            <p class="text-[13px] text-ink truncate">${esc(w.uz) || "—"}</p>
           </div>
-          <button data-id="${w.id}" class="js-learn shrink-0 grid h-8 w-8 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}">${checkSvg}</button>
+          <button data-id="${w.id}" class="${learnCls(on)}">${checkSvg}</button>
         </div>
-        ${(def || ex) ? `<div class="px-3.5 pb-3.5 space-y-1.5">${def}${ex}</div>` : ""}
+        ${hasDetail ? `<div class="js-detail hidden px-3 pb-3 space-y-1.5">${ctx}${ipa ? `<div>${ipa}</div>` : ""}${def}${ex}</div>` : ""}
       </article>`;
     }
     function bindWordCards() {
-      contentEl.querySelectorAll(".js-speak").forEach((el) => el.addEventListener("click", () => speak(el.dataset.en)));
-      contentEl.querySelectorAll(".js-learn").forEach((el) => el.addEventListener("click", () => {
+      contentEl.querySelectorAll(".js-top").forEach((el) => el.addEventListener("click", () => {
+        const d = el.parentElement.querySelector(".js-detail");
+        if (d) d.classList.toggle("hidden");
+      }));
+      contentEl.querySelectorAll(".js-speak").forEach((el) => el.addEventListener("click", (e) => { e.stopPropagation(); speak(el.dataset.en); }));
+      contentEl.querySelectorAll(".js-learn").forEach((el) => el.addEventListener("click", (e) => {
+        e.stopPropagation();
         const on = toggleLearned(el.dataset.id);
-        el.className = `js-learn shrink-0 grid h-8 w-8 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}`;
+        el.className = learnCls(on);
         el.closest(".js-card").classList.toggle("opacity-60", on);
       }));
     }
