@@ -23,11 +23,12 @@ def test_webapp_index_renders(client):
     assert b"telegram-web-app.js" in resp.content
 
 
-def test_api_books_lists_active_books(client):
+def test_api_books_lists_active_books_with_pdf_key(client):
     _seed()
     Book.objects.create(number=2, title="Hidden", slug="hidden", is_active=False)
     data = client.get(reverse("webapp_books")).json()
     assert [b["title"] for b in data["books"]] == ["Book 1"]
+    assert "pdf" in data["books"][0] and "cover" in data["books"][0]
 
 
 def test_api_units_lists_units_for_book(client):

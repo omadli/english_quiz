@@ -15,7 +15,7 @@
       <h1 id="title" class="text-[19px] font-bold tracking-tight leading-tight">Kitoblar</h1>
       <p id="subtitle" class="text-xs text-muted mt-0.5">4000 Essential Words</p>
     </div>
-    <div class="px-4 pb-3">
+    <div id="searchbar" class="px-4 pb-3">
       <label class="flex items-center gap-2.5 rounded-2xl bg-card border border-line px-3.5 py-2.5">
         <svg class="h-4 w-4 text-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" stroke-linecap="round" />
@@ -27,7 +27,19 @@
     </div>
   </header>
 
-  <main id="content" class="px-4 py-4 pb-20 space-y-3"></main>
+  <main id="content" class="px-4 py-4 pb-24 space-y-3"></main>
+
+  <nav class="fixed bottom-0 inset-x-0 z-20 bg-surface border-t border-line flex">
+    <button data-tab="books" class="js-tab flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px]">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H6a2 2 0 0 1-2-2Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Kitoblar</button>
+    <button data-tab="games" class="js-tab flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px]">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 11h4m-2-2v4m5-1h.01M18 12h.01M17 5a4 4 0 0 1 4 4v.5a6.5 6.5 0 0 1-6.5 6.5c-1 0-1.9-.5-2.5-1.3-.6.8-1.5 1.3-2.5 1.3A6.5 6.5 0 0 1 3 9.5V9a4 4 0 0 1 4-4Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Mashqlar</button>
+    <button data-tab="profile" class="js-tab flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px]">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0" stroke-linecap="round"/></svg>
+      Profil</button>
+  </nav>
 
   <script>
     const tg = window.Telegram ? window.Telegram.WebApp : null;
@@ -37,16 +49,22 @@
     const subtitleEl = document.getElementById("subtitle");
     const contentEl = document.getElementById("content");
     const searchEl = document.getElementById("search");
+    const searchbarEl = document.getElementById("searchbar");
+
+    let tab = "books";
+    let booksCache = null;
 
     const POS = {
-      "n.": "bg-blue-500/15 text-blue-400",
-      "v.": "bg-emerald-500/15 text-emerald-400",
-      "adj.": "bg-amber-500/15 text-amber-400",
-      "adv.": "bg-rose-500/15 text-rose-400",
-      "pron.": "bg-violet-500/15 text-violet-400",
-      "prep.": "bg-cyan-500/15 text-cyan-400",
+      "n.": "bg-blue-500/15 text-blue-400", "v.": "bg-emerald-500/15 text-emerald-400",
+      "adj.": "bg-amber-500/15 text-amber-400", "adv.": "bg-rose-500/15 text-rose-400",
+      "pron.": "bg-violet-500/15 text-violet-400", "prep.": "bg-cyan-500/15 text-cyan-400",
     };
     const posClass = (p) => POS[p] || "bg-slate-500/15 text-slate-400";
+    const BOOK_GRAD = [
+      "from-indigo-500 to-fuchsia-600", "from-sky-500 to-blue-600",
+      "from-emerald-500 to-teal-600", "from-amber-500 to-orange-600",
+      "from-rose-500 to-pink-600", "from-violet-500 to-purple-600",
+    ];
     const esc = (s) => (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((x) => x[1]);
 
@@ -55,6 +73,17 @@
       if (!res.ok) throw new Error(res.status);
       return res.json();
     }
+    async function books() {
+      if (!booksCache) booksCache = (await getJSON("api/books/")).books;
+      return booksCache;
+    }
+    function speak(text) {
+      if (!window.speechSynthesis) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
 
     function setBack(fn) {
       if (!tg || !tg.BackButton) return;
@@ -62,25 +91,18 @@
       if (fn) { tg.BackButton.onClick(fn); tg.BackButton.show(); }
       else { tg.BackButton.hide(); }
     }
+    function setHeader(t, s) { titleEl.textContent = t; subtitleEl.textContent = s; }
+    function setContent(cls, html) { contentEl.className = cls; contentEl.innerHTML = html; }
+    function loading() { setContent("px-4 py-16 text-center text-sm text-muted", "Yuklanmoqda…"); }
+    function message(t) { setContent("px-4 py-16 text-center text-sm text-muted", esc(t)); }
 
-    function setHeader(title, subtitle) {
-      titleEl.textContent = title;
-      subtitleEl.textContent = subtitle;
-    }
-    function loading() { contentEl.innerHTML = '<div class="py-16 text-center text-sm text-muted">Yuklanmoqda…</div>'; }
-    function message(text) { contentEl.innerHTML = `<div class="py-16 text-center text-sm text-muted">${esc(text)}</div>`; }
-
-    // ---- learned state ----------------------------------------------------
-    // ponytail: learned words live in Telegram CloudStorage (native, per-user, synced),
-    // sharded into 8 keys to stay under the 4096-char value cap; localStorage fallback
-    // for browser preview. Move to server-side WordProgress only if reports/exams need it.
+    // ---- learned state (Telegram CloudStorage; localStorage fallback) ------
     const SHARDS = 8;
     let learned = new Set();
-
     function loadLearned(done) {
       if (tg && tg.CloudStorage) {
         const keys = Array.from({ length: SHARDS }, (_, i) => "learned_" + i);
-        tg.CloudStorage.getItems(keys, (err, items) => {
+        tg.CloudStorage.getItems(keys, (e, items) => {
           learned = new Set();
           if (items) Object.values(items).forEach((v) => (v || "").split(",").filter(Boolean).forEach((x) => learned.add(x)));
           done && done();
@@ -95,45 +117,38 @@
       learned.has(id) ? learned.delete(id) : learned.add(id);
       if (tg && tg.CloudStorage) {
         const shard = Number(id) % SHARDS;
-        const val = [...learned].filter((x) => Number(x) % SHARDS === shard).join(",");
-        tg.CloudStorage.setItem("learned_" + shard, val);
+        tg.CloudStorage.setItem("learned_" + shard, [...learned].filter((x) => Number(x) % SHARDS === shard).join(","));
       } else {
         localStorage.setItem("learned", [...learned].join(","));
       }
       return learned.has(id);
     }
 
-    // ---- word cards -------------------------------------------------------
+    const speakerSvg = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a9 9 0 0 1 0 12" stroke-linecap="round"/></svg>';
+    const checkSvg = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
     function wordCard(w) {
       const on = learned.has(String(w.id));
-      const badge = w.part_of_speech
-        ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>` : "";
+      const badge = w.part_of_speech ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>` : "";
       const ipa = w.pronunciation ? `<span class="text-xs text-muted">${esc(w.pronunciation)}</span>` : "";
-      const img = w.image ? `<img src="${w.image}" alt="" loading="lazy" class="h-16 w-16 rounded-xl object-cover shrink-0" />` : "";
       const def = w.definition ? `<p class="text-[13px] text-muted leading-snug">${esc(w.definition)}</p>` : "";
       const ex = w.example ? `<p class="text-[13px] italic leading-snug border-l-2 border-accent pl-2.5">${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
       const ctx = (w.book && w.unit) ? `<span class="text-[11px] text-muted">Kitob ${w.book} · Unit ${w.unit}</span>` : "";
-      const learnBtn = `<button data-id="${w.id}" class="js-learn shrink-0 grid h-8 w-8 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}">
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
       return `<article class="js-card rounded-2xl bg-card border border-line shadow-card overflow-hidden ${on ? "opacity-60" : ""}">
-          <div class="flex gap-3 p-3.5">
-            ${img}
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-lg font-bold tracking-tight">${esc(w.en)}</h3>${badge}
-              </div>
-              <div class="flex items-center gap-2">${ipa}${ctx}</div>
-              <p class="text-[15px] font-medium mt-1 text-ink">${esc(w.uz) || "—"}</p>
-            </div>
-            ${learnBtn}
+        <div class="flex gap-2.5 p-3.5 items-start">
+          <button data-en="${esc(w.en)}" class="js-speak shrink-0 grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent">${speakerSvg}</button>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap"><h3 class="text-lg font-bold tracking-tight">${esc(w.en)}</h3>${badge}</div>
+            <div class="flex items-center gap-2">${ipa}${ctx}</div>
+            <p class="text-[15px] font-medium mt-1 text-ink">${esc(w.uz) || "—"}</p>
           </div>
-          ${(def || ex) ? `<div class="px-3.5 pb-3.5 space-y-1.5">${def}${ex}</div>` : ""}
-        </article>`;
+          <button data-id="${w.id}" class="js-learn shrink-0 grid h-8 w-8 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}">${checkSvg}</button>
+        </div>
+        ${(def || ex) ? `<div class="px-3.5 pb-3.5 space-y-1.5">${def}${ex}</div>` : ""}
+      </article>`;
     }
-
-    function renderCards(words, prefixHTML) {
-      contentEl.className = "px-4 py-4 pb-20 space-y-3";
-      contentEl.innerHTML = (prefixHTML || "") + words.map(wordCard).join("");
+    function bindWordCards() {
+      contentEl.querySelectorAll(".js-speak").forEach((el) => el.addEventListener("click", () => speak(el.dataset.en)));
       contentEl.querySelectorAll(".js-learn").forEach((el) => el.addEventListener("click", () => {
         const on = toggleLearned(el.dataset.id);
         el.className = `js-learn shrink-0 grid h-8 w-8 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}`;
@@ -141,109 +156,139 @@
       }));
     }
 
-    // ---- navigation -------------------------------------------------------
+    // ---- KITOBLAR tab ------------------------------------------------------
+    function bookCard(b) {
+      const grad = BOOK_GRAD[(b.number - 1) % BOOK_GRAD.length];
+      return `<button data-id="${b.id}" data-num="${b.number}" data-title="${esc(b.title)}" data-pdf="${b.pdf || ""}" class="js-book text-left">
+        <div class="aspect-[3/4] rounded-2xl bg-gradient-to-br ${grad} p-3 flex flex-col justify-between shadow-card">
+          <span class="text-white/90 text-3xl font-black">${b.number}</span>
+          <span class="text-white text-[13px] font-semibold leading-tight line-clamp-3">${esc(b.title)}</span>
+        </div>
+        <span class="block mt-1.5 text-[11px] text-muted text-center">${b.word_count} so'z</span>
+      </button>`;
+    }
     async function showBooks() {
       loading(); setHeader("Kitoblar", "4000 Essential Words"); setBack(null);
-      const { books } = await getJSON("api/books/");
-      if (!books.length) return message("Hozircha kitob qo'shilmagan.");
-      contentEl.className = "px-4 py-4 pb-20 space-y-3";
-      contentEl.innerHTML = books.map((b) => (
-        `<button data-id="${b.id}" data-title="${esc(b.title)}"
-          class="js-book w-full flex items-center gap-3 rounded-2xl bg-card border border-line p-3.5 text-left active:scale-[.99] transition">
-          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink font-bold">${b.number}</span>
-          <span class="min-w-0 flex-1"><span class="block font-semibold truncate">${esc(b.title)}</span><span class="block text-xs text-muted">${b.word_count} so'z</span></span>
-          <svg class="h-5 w-5 text-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>`
-      )).join("");
-      contentEl.querySelectorAll(".js-book").forEach((el) => el.addEventListener("click", () => showUnits({ id: el.dataset.id, title: el.dataset.title })));
+      const list = await books();
+      if (!list.length) return message("Hozircha kitob yo'q.");
+      setContent("px-4 py-4 pb-24 grid grid-cols-3 gap-3", list.map(bookCard).join(""));
+      contentEl.querySelectorAll(".js-book").forEach((el) => el.addEventListener("click", () =>
+        showUnits({ id: el.dataset.id, number: el.dataset.num, title: el.dataset.title, pdf: el.dataset.pdf })));
     }
-
     async function showUnits(book) {
       loading(); setHeader(book.title, "Bo'limni tanlang"); setBack(showBooks);
       const { units } = await getJSON(`api/units/${book.id}/`);
-      if (!units.length) return message("Bu kitobda bo'lim yo'q.");
-      contentEl.className = "px-4 py-4 pb-20 grid grid-cols-4 gap-2.5";
-      contentEl.innerHTML = units.map((u) => `<button data-id="${u.id}" data-n="${u.number}" class="js-unit aspect-square grid place-items-center rounded-2xl bg-card border border-line text-lg font-bold active:scale-95 transition">${u.number}</button>`).join("");
-      contentEl.querySelectorAll(".js-unit").forEach((el) => el.addEventListener("click", () => showWords(book, { id: el.dataset.id, number: el.dataset.n })));
+      const pdfBtn = book.pdf ? `<a href="${book.pdf}" target="_blank" rel="noopener" class="col-span-6 rounded-2xl bg-card border border-line py-2.5 text-center text-sm font-semibold text-accent">📥 PDF yuklab olish</a>` : "";
+      const chips = units.map((u) => `<button data-id="${u.id}" data-n="${u.number}" class="js-unit aspect-square grid place-items-center rounded-xl bg-card border border-line text-sm font-semibold active:scale-90 transition">${u.number}</button>`).join("");
+      setContent("px-4 py-4 pb-24 grid grid-cols-6 gap-2", chips + pdfBtn);
+      contentEl.querySelectorAll(".js-unit").forEach((el) => el.addEventListener("click", () =>
+        showWords(book, { id: el.dataset.id, number: el.dataset.n })));
     }
-
     async function showWords(book, unit) {
       loading(); setHeader(`Unit ${unit.number}`, book.title); setBack(() => showUnits(book));
       const { words } = await getJSON(`api/words/${unit.id}/`);
-      if (!words.length) return message("Bu bo'limda so'z topilmadi.");
-      const actions = `<div class="grid grid-cols-3 gap-2">
-        <button id="js-quiz" class="rounded-2xl bg-accent text-accent-ink font-semibold py-3 text-center text-sm active:scale-95 transition">🧩 Mashq</button>
-        <button id="js-match" class="rounded-2xl bg-card border border-line font-semibold py-3 text-center text-sm active:scale-95 transition">🎮 Juftlash</button>
-        <button id="js-spell" class="rounded-2xl bg-card border border-line font-semibold py-3 text-center text-sm active:scale-95 transition">✍️ Yozish</button></div>`;
-      renderCards(words, actions);
-      const reload = () => showWords(book, unit);
-      document.getElementById("js-quiz").addEventListener("click", () => startQuiz(words, reload));
-      document.getElementById("js-match").addEventListener("click", () => startMatch(words, reload));
-      document.getElementById("js-spell").addEventListener("click", () => startSpell(words, reload));
+      if (!words.length) return message("So'z topilmadi.");
+      setContent("px-4 py-4 pb-24 space-y-3", words.map(wordCard).join(""));
+      bindWordCards();
     }
 
-    // ---- spelling game (type the English word for a given Uzbek meaning) --
-    function startSpell(words, back) {
-      const qs = shuffle(words.filter((w) => w.uz && w.en)).slice(0, 10);
-      if (!qs.length) return message("Yozish uchun so'z yo'q.");
+    // ---- MASHQLAR tab ------------------------------------------------------
+    async function showGamesHome() {
+      loading(); setHeader("Mashqlar", "Kitobni tanlang"); setBack(null);
+      const list = await books();
+      setContent("px-4 py-4 pb-24 grid grid-cols-3 gap-3", list.map(bookCard).join(""));
+      contentEl.querySelectorAll(".js-book").forEach((el) => el.addEventListener("click", () =>
+        showGameUnits({ id: el.dataset.id, number: el.dataset.num, title: el.dataset.title })));
+    }
+    async function showGameUnits(book) {
+      loading(); setHeader(book.title, "Bo'limni tanlang"); setBack(showGamesHome);
+      const { units } = await getJSON(`api/units/${book.id}/`);
+      setContent("px-4 py-4 pb-24 grid grid-cols-6 gap-2",
+        units.map((u) => `<button data-id="${u.id}" data-n="${u.number}" class="js-gunit aspect-square grid place-items-center rounded-xl bg-card border border-line text-sm font-semibold active:scale-90 transition">${u.number}</button>`).join(""));
+      contentEl.querySelectorAll(".js-gunit").forEach((el) => el.addEventListener("click", () =>
+        showGamePick(book, { id: el.dataset.id, number: el.dataset.n })));
+    }
+    async function showGamePick(book, unit) {
+      loading(); setHeader(`Unit ${unit.number}`, "O'yinni tanlang"); setBack(() => showGameUnits(book));
+      const { words } = await getJSON(`api/words/${unit.id}/`);
+      if (words.length < 4) return message("O'yin uchun so'z yetarli emas.");
+      const back = () => showGamePick(book, unit);
+      setContent("px-4 py-6 pb-24 space-y-3",
+        `<button id="g-quiz" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-4 active:scale-[.99] transition">🧩 Test — variantli savol</button>
+         <button id="g-match" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🎮 Juftlash — en ↔ uz</button>
+         <button id="g-spell" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">✍️ Yozish — so'zni ter</button>`);
+      document.getElementById("g-quiz").addEventListener("click", () => startQuiz(words, back));
+      document.getElementById("g-match").addEventListener("click", () => startMatch(words, back));
+      document.getElementById("g-spell").addEventListener("click", () => startSpell(words, back));
+    }
+
+    // ---- PROFIL tab --------------------------------------------------------
+    async function showProfile() {
+      loading(); setHeader("Profil", "Sizning progressingiz"); setBack(null);
+      const list = await books();
+      const total = list.reduce((s, b) => s + b.word_count, 0) || 1;
+      const done = learned.size;
+      const pct = Math.round((done / total) * 100);
+      setContent("px-4 py-6 pb-24 space-y-5",
+        `<div class="rounded-2xl bg-card border border-line p-5 text-center">
+           <div class="text-5xl font-black tracking-tight text-accent">${done}</div>
+           <div class="text-sm text-muted mt-1">o'rganilgan so'z / ${total}</div>
+           <div class="mt-4 h-2.5 rounded-full bg-line overflow-hidden"><div class="h-full bg-accent" style="width:${pct}%"></div></div>
+           <div class="text-xs text-muted mt-2">${pct}% yakunlandi</div>
+         </div>
+         <div class="grid grid-cols-3 gap-3 text-center">
+           <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${list.length}</div><div class="text-[11px] text-muted">kitob</div></div>
+           <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${total}</div><div class="text-[11px] text-muted">so'z</div></div>
+           <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${done}</div><div class="text-[11px] text-muted">o'rgandim</div></div>
+         </div>
+         <p class="text-center text-xs text-muted">O'quv sozlamalari botda: <b>/settings</b> ⚙️</p>`);
+    }
+
+    // ---- games (client-side; reuse the selected words) ---------------------
+    function startQuiz(words, back) {
+      const pool = words.filter((w) => w.uz);
+      const qs = shuffle(pool).slice(0, 10);
       let i = 0, score = 0;
       setBack(back);
-
       function render() {
-        if (i >= qs.length) return result();
+        if (i >= qs.length) return done();
         const w = qs[i];
-        setHeader(`Yozish ${i + 1}/${qs.length}`, `Ball: ${score}`);
-        contentEl.className = "px-4 py-6 pb-20 space-y-4";
-        contentEl.innerHTML =
-          `<div class="text-center"><div class="text-xl font-semibold">${esc(w.uz)}</div>${w.definition ? `<div class="text-xs text-muted mt-1">${esc(w.definition)}</div>` : ""}</div>
-           <input id="js-spell-in" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" placeholder="Inglizcha yozing…" class="w-full rounded-2xl bg-card border border-line px-4 py-3 text-[15px] text-ink outline-none" />
-           <button id="js-check" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3">Tekshirish</button>
-           <p id="js-sres" class="text-center text-sm"></p>`;
-        const input = document.getElementById("js-spell-in");
-        input.focus();
-        function check() {
-          if (input.disabled) return;
-          const ok = input.value.trim().toLowerCase() === w.en.toLowerCase();
-          if (ok) score++;
-          input.disabled = true;
-          input.classList.add("ring-2", ok ? "ring-emerald-400" : "ring-rose-400");
-          document.getElementById("js-sres").innerHTML = ok
-            ? '<span class="text-emerald-400">✅ To\'g\'ri</span>'
-            : `<span class="text-rose-400">❌ ${esc(w.en)}</span>`;
-          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(ok ? "success" : "error");
-          setTimeout(() => { i++; render(); }, 900);
-        }
-        document.getElementById("js-check").addEventListener("click", check);
-        input.addEventListener("keydown", (e) => { if (e.key === "Enter") check(); });
+        const opts = shuffle([w.uz, ...shuffle(pool.filter((x) => x.uz !== w.uz)).slice(0, 3).map((x) => x.uz)]);
+        setHeader(`Savol ${i + 1}/${qs.length}`, `Ball: ${score}`);
+        setContent("px-4 py-6 pb-24 space-y-3",
+          `<div class="text-center mb-3"><div class="text-2xl font-bold tracking-tight">${esc(w.en)}</div><div class="text-xs text-muted">${esc(w.part_of_speech || "")}</div></div>` +
+          opts.map((o) => `<button class="js-opt w-full rounded-2xl bg-card border border-line p-3.5 text-left text-[15px]" data-uz="${esc(o)}">${esc(o)}</button>`).join(""));
+        contentEl.querySelectorAll(".js-opt").forEach((el) => el.addEventListener("click", () => {
+          if (el.dataset.answered) return;
+          if (el.dataset.uz === w.uz) score++;
+          contentEl.querySelectorAll(".js-opt").forEach((b) => {
+            b.dataset.answered = "1";
+            if (b.dataset.uz === w.uz) b.classList.add("ring-2", "ring-emerald-400");
+            else if (b === el) b.classList.add("ring-2", "ring-rose-400");
+          });
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(el.dataset.uz === w.uz ? "success" : "error");
+          setTimeout(() => { i++; render(); }, 750);
+        }));
       }
-
-      function result() {
-        setHeader("Natija", "Yozish tugadi");
-        contentEl.className = "px-4 py-16 pb-20 text-center space-y-4";
-        contentEl.innerHTML =
+      function done() {
+        setHeader("Natija", "Test tugadi");
+        setContent("px-4 py-16 pb-24 text-center space-y-4",
           `<div class="text-5xl font-bold tracking-tight">${score}/${qs.length}</div>
-           <button id="js-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`;
-        document.getElementById("js-again").addEventListener("click", () => startSpell(words, back));
+           <button id="g-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
+        document.getElementById("g-again").addEventListener("click", () => startQuiz(words, back));
       }
       render();
     }
-
-    // ---- matching game (client-side; pair en <-> uz) ----------------------
     function startMatch(words, back) {
       const pool = shuffle(words.filter((w) => w.uz)).slice(0, 6);
-      if (pool.length < 3) return message("Moslashtirish uchun so'z yetarli emas.");
-      setBack(back); setHeader("Moslashtirish", "So'zni tarjimasiga ulang");
+      setBack(back); setHeader("Juftlash", "So'zni tarjimasiga ulang");
       const col = (arr, cls, text) => `<div class="space-y-2.5">${arr.map((w) => `<button class="${cls} w-full rounded-xl bg-card border border-line p-3 text-sm" data-id="${w.id}">${esc(text(w))}</button>`).join("")}</div>`;
-      contentEl.className = "px-4 py-4 pb-20";
-      contentEl.innerHTML = `<div class="grid grid-cols-2 gap-2.5">${col(shuffle(pool.slice()), "js-en font-semibold", (w) => w.en)}${col(shuffle(pool.slice()), "js-uz", (w) => w.uz)}</div>
-        <p id="js-mmsg" class="text-center text-sm text-muted mt-5"></p>`;
+      setContent("px-4 py-4 pb-24",
+        `<div class="grid grid-cols-2 gap-2.5">${col(shuffle(pool.slice()), "js-en font-semibold", (w) => w.en)}${col(shuffle(pool.slice()), "js-uz", (w) => w.uz)}</div><p id="js-mmsg" class="text-center text-sm text-muted mt-5"></p>`);
       let sel = null, done = 0;
       function pick(el, isEn) {
         if (el.disabled) return;
-        if (isEn) {
-          contentEl.querySelectorAll(".js-en").forEach((b) => b.classList.remove("ring-2", "ring-accent"));
-          sel = el; el.classList.add("ring-2", "ring-accent"); return;
-        }
+        if (isEn) { contentEl.querySelectorAll(".js-en").forEach((b) => b.classList.remove("ring-2", "ring-accent")); sel = el; el.classList.add("ring-2", "ring-accent"); return; }
         if (!sel) return;
         if (sel.dataset.id === el.dataset.id) {
           [sel, el].forEach((b) => { b.disabled = true; b.classList.remove("ring-2", "ring-accent"); b.classList.add("bg-emerald-500/20", "border-emerald-400/40"); });
@@ -259,71 +304,70 @@
       contentEl.querySelectorAll(".js-en").forEach((el) => el.addEventListener("click", () => pick(el, true)));
       contentEl.querySelectorAll(".js-uz").forEach((el) => el.addEventListener("click", () => pick(el, false)));
     }
-
-    // ---- in-app quiz (client-side; reuses the loaded unit words) ----------
-    function startQuiz(words, back) {
-      const pool = words.filter((w) => w.uz);
-      if (pool.length < 4) return message("Mashq uchun so'z yetarli emas.");
-      const qs = shuffle(pool).slice(0, 10);
+    function startSpell(words, back) {
+      const qs = shuffle(words.filter((w) => w.uz && w.en)).slice(0, 10);
       let i = 0, score = 0;
       setBack(back);
-
       function render() {
-        if (i >= qs.length) return result();
+        if (i >= qs.length) return done();
         const w = qs[i];
-        const distractors = shuffle(pool.filter((x) => x.uz !== w.uz)).slice(0, 3).map((x) => x.uz);
-        const opts = shuffle([w.uz, ...distractors]);
-        setHeader(`Savol ${i + 1}/${qs.length}`, `Ball: ${score}`);
-        contentEl.className = "px-4 py-6 pb-20 space-y-3";
-        contentEl.innerHTML =
-          `<div class="text-center mb-3"><div class="text-2xl font-bold tracking-tight">${esc(w.en)}</div><div class="text-xs text-muted">${esc(w.part_of_speech || "")}</div></div>` +
-          opts.map((o) => `<button class="js-opt w-full rounded-2xl bg-card border border-line p-3.5 text-left text-[15px]" data-uz="${esc(o)}">${esc(o)}</button>`).join("");
-        contentEl.querySelectorAll(".js-opt").forEach((el) => el.addEventListener("click", () => {
-          if (el.dataset.answered) return;
-          const correct = el.dataset.uz === w.uz;
-          if (correct) score++;
-          contentEl.querySelectorAll(".js-opt").forEach((b) => {
-            b.dataset.answered = "1";
-            if (b.dataset.uz === w.uz) b.classList.add("ring-2", "ring-emerald-400");
-            else if (b === el) b.classList.add("ring-2", "ring-rose-400");
-          });
-          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(correct ? "success" : "error");
-          setTimeout(() => { i++; render(); }, 750);
-        }));
+        setHeader(`Yozish ${i + 1}/${qs.length}`, `Ball: ${score}`);
+        setContent("px-4 py-6 pb-24 space-y-4",
+          `<div class="text-center"><div class="text-xl font-semibold">${esc(w.uz)}</div>${w.definition ? `<div class="text-xs text-muted mt-1">${esc(w.definition)}</div>` : ""}</div>
+           <input id="sp" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" placeholder="Inglizcha yozing…" class="w-full rounded-2xl bg-card border border-line px-4 py-3 text-[15px] text-ink outline-none" />
+           <button id="sp-check" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3">Tekshirish</button>
+           <p id="sp-res" class="text-center text-sm"></p>`);
+        const input = document.getElementById("sp"); input.focus();
+        function check() {
+          if (input.disabled) return;
+          const ok = input.value.trim().toLowerCase() === w.en.toLowerCase();
+          if (ok) score++;
+          input.disabled = true; input.classList.add("ring-2", ok ? "ring-emerald-400" : "ring-rose-400");
+          document.getElementById("sp-res").innerHTML = ok ? '<span class="text-emerald-400">✅ To\'g\'ri</span>' : `<span class="text-rose-400">❌ ${esc(w.en)}</span>`;
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(ok ? "success" : "error");
+          setTimeout(() => { i++; render(); }, 900);
+        }
+        document.getElementById("sp-check").addEventListener("click", check);
+        input.addEventListener("keydown", (e) => { if (e.key === "Enter") check(); });
       }
-
-      function result() {
-        setHeader("Natija", "Mashq tugadi");
-        contentEl.className = "px-4 py-16 pb-20 text-center space-y-4";
-        contentEl.innerHTML =
-          `<div class="text-5xl font-bold tracking-tight">${score}/${qs.length}</div>
-           <p class="text-sm text-muted">${score === qs.length ? "Zo'r! 🎉" : "Yaxshi — yana urinib ko'ring 💪"}</p>
-           <button id="js-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`;
-        document.getElementById("js-again").addEventListener("click", () => startQuiz(words, back));
+      function done() {
+        setHeader("Natija", "Yozish tugadi");
+        setContent("px-4 py-16 pb-24 text-center space-y-4",
+          `<div class="text-5xl font-bold tracking-tight">${score}/${qs.length}</div><button id="sp-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
+        document.getElementById("sp-again").addEventListener("click", () => startSpell(words, back));
       }
       render();
     }
 
-    // ---- live search ------------------------------------------------------
+    // ---- search (Kitoblar tab) --------------------------------------------
     let searchTimer = null, searchActive = false;
     async function runSearch(q) {
       const { words } = await getJSON(`api/search/?q=${encodeURIComponent(q)}`);
       if (!searchActive) return;
-      setHeader("Qidiruv", `"${q}" — ${words.length} natija`);
-      setBack(exitSearch);
+      setHeader("Qidiruv", `"${q}" — ${words.length} natija`); setBack(exitSearch);
       if (!words.length) return message("Hech narsa topilmadi.");
-      renderCards(words);
+      setContent("px-4 py-4 pb-24 space-y-3", words.map(wordCard).join("")); bindWordCards();
     }
     function exitSearch() { searchActive = false; searchEl.value = ""; showBooks(); }
     searchEl.addEventListener("input", () => {
-      const q = searchEl.value.trim();
-      clearTimeout(searchTimer);
+      const q = searchEl.value.trim(); clearTimeout(searchTimer);
       if (q.length < 2) { if (searchActive) exitSearch(); return; }
-      searchActive = true;
-      searchTimer = setTimeout(() => runSearch(q), 220);
+      searchActive = true; searchTimer = setTimeout(() => runSearch(q), 220);
     });
 
-    loadLearned(() => showBooks().catch(() => message("Xatolik yuz berdi. Sahifani qayta oching.")));
+    // ---- tab bar -----------------------------------------------------------
+    function setTab(next) {
+      tab = next; searchActive = false; searchEl.value = "";
+      searchbarEl.style.display = next === "books" ? "" : "none";
+      document.querySelectorAll(".js-tab").forEach((el) =>
+        el.classList.toggle("text-accent", el.dataset.tab === next) || el.classList.toggle("text-muted", el.dataset.tab !== next));
+      if (next === "books") showBooks();
+      else if (next === "games") showGamesHome();
+      else showProfile();
+    }
+    document.querySelectorAll(".js-tab").forEach((el) => el.addEventListener("click", () => setTab(el.dataset.tab)));
+
+    loadLearned(() => setTab("books"));
   </script>
 </body>
 </html>

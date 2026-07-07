@@ -29,10 +29,18 @@ def webapp_index(request):
 
 
 def api_books(request):
-    books = Book.objects.filter(is_active=True).order_by("number").values(
-        "id", "number", "title", "word_count"
-    )
-    return JsonResponse({"books": list(books)})
+    books = [
+        {
+            "id": b.id,
+            "number": b.number,
+            "title": b.title,
+            "word_count": b.word_count,
+            "pdf": b.pdf.url if b.pdf else None,
+            "cover": b.cover.url if b.cover else None,
+        }
+        for b in Book.objects.filter(is_active=True).order_by("number")
+    ]
+    return JsonResponse({"books": books})
 
 
 def api_units(request, book_id: int):
