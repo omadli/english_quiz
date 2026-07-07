@@ -35,7 +35,7 @@ async def test_start_returning_user_gets_welcome_back():
     message = AsyncMock()
     await start_handler.cmd_start(message, _state(), _cmd(), user=MagicMock(), profile=profile)
     args, kwargs = message.answer.call_args
-    assert "settings" in (args[0] if args else kwargs.get("text", "")).lower()
+    assert kwargs.get("reply_markup") is not None  # returning users get the main menu
 
 
 @patch("bot.handlers.start.redeem_token")

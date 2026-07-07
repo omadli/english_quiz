@@ -6,7 +6,7 @@ WELCOME_NEW = (
     "Har kuni belgilangan vaqtda yangi so'zlarni yuboraman va imtihon qilaman.\n\n"
     "Keling, avval o'quv rejangizni sozlaymiz."
 )
-WELCOME_BACK = "Xush kelibsiz! 👋 Sozlamalarni ko'rish uchun /settings buyrug'ini yuboring."
+WELCOME_BACK = "Xush kelibsiz! 👋✨ Quyidagi menyudan foydalaning 👇"
 LINKED_OK = "✅ Muvaffaqiyatli ulandingiz! Endi hisobotlarni olib turasiz."
 ONBOARD_START_BTN = "🚀 Sozlashni boshlash"
 ONBOARD_DEFAULTS_BTN = "⚡ Standart bilan boshlash"
@@ -91,17 +91,14 @@ MENU_GROUP_QUIZ = "👥 Guruh quizi"
 MENU_TOP = "🏆 Reyting"
 MENU_SETTINGS = "⚙️ Sozlamalar"
 MENU_WEBAPP = "🌐 Mini App"
-MENU_OPENED = "Asosiy menyu 👇"
+MENU_OPENED = "🏠 <b>Asosiy menyu</b> 👇"
 
 GROUP_QUIZ_INFO = (
     "👥 <b>Guruh quizi</b>\n\n"
-    "Guruhda quiz o'ynash uchun:\n"
-    "1. Botni guruhingizga qo'shing va <b>admin</b> qiling.\n"
-    "2. @BotFather'da <code>/setprivacy</code> → <b>Disable</b> qiling.\n"
-    "3. Guruh admini <code>/quiz</code> yuborib, sehrgardan o'tsin.\n\n"
-    "<code>/stop</code> — ketayotgan testni to'xtatadi."
+    "Meni guruhingizga qo'shing 👇 so'ng admin <code>/quiz</code> yozib boshlasin — "
+    "men ketma-ket quiz-savollar yuboraman va yakunda 🏆 reyting chiqaraman! 🔥"
 )
-GROUP_QUIZ_ADD_BTN = "➕ Botni guruhga qo'shish"
+GROUP_QUIZ_ADD_BTN = "➕ Guruhga qo'shish"
 
 # Word list browser
 WORDS_PICK_BOOK = "📖 Qaysi kitob so'zlarini ko'rasiz?"
@@ -111,10 +108,19 @@ WORDS_HEADER = "📖 <b>{book} — Unit {unit}</b>\n"
 BTN_BACK = "⬅️ Orqaga"
 BTN_PREV = "⬅️"
 BTN_NEXT = "➡️"
+BTN_DETAIL = "📖 Batafsil"
 
 # Personal practice quiz
 QUIZ_PICK_BOOK = "🧠 Qaysi kitobdan mashq qilamiz?"
-QUIZ_PICK_UNIT = "Qaysi bo'limdan (unit) savollar bo'lsin?"
-QUIZ_NO_WORDS = "Bu bo'limda savol tuzishga so'z yetarli emas."
-QUIZ_STARTING = "🧠 <b>{count} ta savol</b> yuborilyapti — har biriga javob belgilang. Omad! 💪"
-QUIZ_DONE = "✅ Mashq tugadi! Yana urinib ko'rish uchun 🧠 Test / Quiz bosing."
+QUIZ_PICK_UNIT = "🎯 Bo'lim(lar)ni tanlang (bir nechta bo'lishi mumkin), so'ng «🚀 Boshlash»:"
+QUIZ_PICK_UNIT_EMPTY = "Kamida bitta bo'lim tanlang 👆"
+QUIZ_NO_WORDS = "Bu bo'lim(lar)da savol tuzishga so'z yetarli emas. 😔"
+QUIZ_STARTING = "🧠 <b>{count} ta savol</b> — har biriga <b>30 soniya</b> ⏱ Tayyor bo'ling! 💪"
+QUIZ_SKIPPED = "⏭ Javob berilmadi."
+QUIZ_PAUSED = (
+    "⏸ Ketma-ket 2 ta savolga javob bermadingiz — to'xtatildi. "
+    "Davom etish: 🧠 Test / Quiz."
+)
+QUIZ_RESULT = "🏁 <b>Mashq tugadi!</b>\nNatija: <b>{correct}/{total}</b> to'g'ri 🎯"
+BTN_ALL_UNITS = "🗂 Hammasi"
+BTN_START = "🚀 Boshlash"
