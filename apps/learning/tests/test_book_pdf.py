@@ -2,16 +2,15 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.catalog.models import Book
-from apps.learning.services.book_pdf import active_books, get_book_document
+from apps.learning.services.book_pdf import active_books, get_sendable_book, save_file_id
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
 def media_root(settings, tmp_path):
-    # Django's FileField writes hit the real filesystem and are NOT rolled back
-    # by the test-DB transaction; isolate each test run under a throwaway
-    # MEDIA_ROOT so uploaded PDFs never land in the real media/ tree.
+    # FileField writes hit the real filesystem and aren't rolled back by the
+    # test-DB transaction; isolate each run under a throwaway MEDIA_ROOT.
     settings.MEDIA_ROOT = tmp_path
 
 
@@ -19,27 +18,36 @@ def _book(number=1, **kw):
     return Book.objects.create(number=number, title=f"Book {number}", slug=f"book-{number}", **kw)
 
 
-def test_get_book_document_serves_uploaded_pdf():
-    book = _book(pdf=SimpleUploadedFile("b.pdf", b"%PDF-uploaded"))
-    result = get_book_document(book.id)
-    assert result is not None
-    name, data = result
+def test_get_sendable_book_returns_bytes_when_uncached():
+    book = _book(pdf=SimpleUploadedFile("b.pdf", b"%PDF-x"))
+    name, payload = get_sendable_book(book.id)
     assert name == "Book 1.pdf"
-    assert data == b"%PDF-uploaded"
+    assert payload == b"%PDF-x"
 
 
-def test_get_book_document_none_when_no_pdf():
-    book = _book()  # no PDF attached — we no longer generate one
-    assert get_book_document(book.id) is None
+def test_get_sendable_book_returns_cached_file_id():
+    book = _book(pdf=SimpleUploadedFile("b.pdf", b"%PDF-x"), telegram_file_id="ABC123")
+    name, payload = get_sendable_book(book.id)
+    assert payload == "ABC123"  # no re-upload
 
 
-def test_get_book_document_missing_returns_none():
-    assert get_book_document(999999) is None
+def test_get_sendable_book_none_when_no_pdf():
+    assert get_sendable_book(_book().id) is None
+
+
+def test_get_sendable_book_missing_returns_none():
+    assert get_sendable_book(999999) is None
+
+
+def test_save_file_id_persists():
+    book = _book(pdf=SimpleUploadedFile("b.pdf", b"%PDF-x"))
+    save_file_id(book.id, "XYZ")
+    book.refresh_from_db()
+    assert book.telegram_file_id == "XYZ"
 
 
 def test_active_books_ordered():
     _book(2)
     _book(1)
     _book(3, is_active=False)
-    books = active_books()
-    assert [b.number for b in books] == [1, 2]
+    assert [b.number for b in active_books()] == [1, 2]

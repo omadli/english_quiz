@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
-from apps.learning.services.book_pdf import active_books, get_book_document
+from apps.learning.services.book_pdf import active_books, get_sendable_book, save_file_id
 from bot import strings
 from bot.keyboards.books import books_keyboard
 from bot.sender import send_document
@@ -27,13 +27,16 @@ async def cmd_book(message: Message) -> None:
 async def send_pdf(callback: CallbackQuery) -> None:
     await callback.answer(strings.PDF_SENDING)
     book_id = int(callback.data.split(":")[-1])
-    doc = await sync_to_async(get_book_document)(book_id)
+    doc = await sync_to_async(get_sendable_book)(book_id)
     if doc is None:
         await callback.message.answer(strings.PDF_NOT_AVAILABLE)
         return
-    filename, data = doc
+    filename, payload = doc
     try:
-        await sync_to_async(send_document)(callback.message.chat.id, data, filename)
+        file_id = await sync_to_async(send_document)(callback.message.chat.id, payload, filename)
     except Exception as exc:  # best-effort
         logger.warning("failed to send book pdf %s: %s", book_id, exc)
         await callback.message.answer(strings.PDF_ERROR)
+        return
+    if not isinstance(payload, str):  # first upload — cache the file_id for next time
+        await sync_to_async(save_file_id)(book_id, file_id)

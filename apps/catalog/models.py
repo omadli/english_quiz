@@ -30,6 +30,7 @@ class Book(TimeStampedModel):
     level = models.CharField(max_length=8, blank=True)
     cover = models.ImageField(upload_to="images/books/covers/", blank=True, null=True)
     pdf = models.FileField(upload_to="books/pdf/", blank=True, null=True)
+    telegram_file_id = models.CharField(max_length=200, blank=True)  # cached after first upload
     word_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 

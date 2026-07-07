@@ -78,16 +78,21 @@ def send_quiz_poll(
     return asyncio.run(_run())
 
 
-async def _send_document(bot: Bot, chat_id: int, data: bytes, filename: str) -> None:
-    await bot.send_document(chat_id, BufferedInputFile(data, filename))
+async def _send_document(bot: Bot, chat_id: int, document: bytes | str, filename: str) -> str:
+    # `document` is either raw bytes (upload) or a Telegram file_id (str, no re-upload).
+    input_doc = document if isinstance(document, str) else BufferedInputFile(document, filename)
+    msg = await bot.send_document(chat_id, input_doc)
+    return msg.document.file_id
 
 
-def send_document(chat_id: int, data: bytes, filename: str) -> None:
-    async def _run() -> None:
+def send_document(chat_id: int, document: bytes | str, filename: str = "") -> str:
+    """Send a document (bytes to upload, or a cached file_id) and return its file_id."""
+
+    async def _run() -> str:
         bot = _make_bot()
         try:
-            await _send_document(bot, chat_id, data, filename)
+            return await _send_document(bot, chat_id, document, filename)
         finally:
             await bot.session.close()
 
-    asyncio.run(_run())
+    return asyncio.run(_run())

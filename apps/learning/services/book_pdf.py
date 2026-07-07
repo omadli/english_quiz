@@ -1,18 +1,25 @@
 from apps.catalog.models import Book
 
 
-def get_book_document(book_id: int) -> tuple[str, bytes] | None:
-    """Return (filename, bytes) of the book's uploaded PDF, or None if it has none.
+def active_books() -> list:
+    return list(Book.objects.filter(is_active=True).order_by("number"))
 
-    We only ever serve the real PDF file uploaded to ``Book.pdf`` — no generated
-    vocabulary PDF. Link the ready files with ``manage.py link_book_pdfs``.
+
+def get_sendable_book(book_id: int) -> tuple[str, bytes | str] | None:
+    """Return (filename, payload) for the book's PDF, or None if it has none.
+
+    payload is the cached Telegram ``file_id`` (str) when available — so we
+    send by id instead of re-uploading — otherwise the raw PDF bytes to upload.
     """
     book = Book.objects.filter(pk=book_id).first()
     if book is None or not book.pdf:
         return None
+    filename = f"{book.title}.pdf"
+    if book.telegram_file_id:
+        return (filename, book.telegram_file_id)
     with book.pdf.open("rb") as f:
-        return (f"{book.title}.pdf", f.read())
+        return (filename, f.read())
 
 
-def active_books() -> list:
-    return list(Book.objects.filter(is_active=True).order_by("number"))
+def save_file_id(book_id: int, file_id: str) -> None:
+    Book.objects.filter(pk=book_id).update(telegram_file_id=file_id)

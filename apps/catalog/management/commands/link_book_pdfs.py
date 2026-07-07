@@ -33,5 +33,6 @@ class Command(BaseCommand):
             rel = f"books/{path.name}"
             if book.pdf.name != rel:
                 book.pdf.name = rel
-                book.save(update_fields=["pdf", "updated_at"])
+                book.telegram_file_id = ""  # file changed — drop the stale cached id
+                book.save(update_fields=["pdf", "telegram_file_id", "updated_at"])
             self.stdout.write(self.style.SUCCESS(f"book {book.number} → {rel}"))

@@ -25,21 +25,34 @@ async def test_cmd_book_no_books(mock_books):
     message.answer.assert_awaited()
 
 
-@patch("bot.handlers.books.send_document")
-@patch("bot.handlers.books.get_book_document")
-async def test_send_pdf_sends_document(mock_get, mock_send):
-    mock_get.return_value = ("book-1-lugat.pdf", b"%PDF-x")
+@patch("bot.handlers.books.save_file_id")
+@patch("bot.handlers.books.send_document", return_value="NEWID")
+@patch("bot.handlers.books.get_sendable_book")
+async def test_send_pdf_uploads_then_caches_file_id(mock_get, mock_send, mock_save):
+    mock_get.return_value = ("Book 1.pdf", b"%PDF-x")  # bytes → upload
     callback = AsyncMock()
     callback.data = "pdf:book:1"
     callback.message.chat.id = 55
     await books.send_pdf(callback)
-    mock_send.assert_called_once()
-    assert mock_send.call_args.args[0] == 55
-    assert mock_send.call_args.args[2] == "book-1-lugat.pdf"
+    assert mock_send.call_args.args[1] == b"%PDF-x"
+    mock_save.assert_called_once_with(1, "NEWID")
+
+
+@patch("bot.handlers.books.save_file_id")
+@patch("bot.handlers.books.send_document", return_value="CACHED")
+@patch("bot.handlers.books.get_sendable_book")
+async def test_send_pdf_uses_cached_file_id_without_resaving(mock_get, mock_send, mock_save):
+    mock_get.return_value = ("Book 1.pdf", "CACHED")  # str → cached file_id
+    callback = AsyncMock()
+    callback.data = "pdf:book:1"
+    callback.message.chat.id = 55
+    await books.send_pdf(callback)
+    assert mock_send.call_args.args[1] == "CACHED"
+    mock_save.assert_not_called()
 
 
 @patch("bot.handlers.books.send_document")
-@patch("bot.handlers.books.get_book_document", return_value=None)
+@patch("bot.handlers.books.get_sendable_book", return_value=None)
 async def test_send_pdf_missing_book(mock_get, mock_send):
     callback = AsyncMock()
     callback.data = "pdf:book:999"
