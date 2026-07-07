@@ -171,12 +171,61 @@
       loading(); setHeader(`Unit ${unit.number}`, book.title); setBack(() => showUnits(book));
       const { words } = await getJSON(`api/words/${unit.id}/`);
       if (!words.length) return message("Bu bo'limda so'z topilmadi.");
-      const actions = `<div class="grid grid-cols-2 gap-2.5">
-        <button id="js-quiz" class="rounded-2xl bg-accent text-accent-ink font-semibold py-3 text-center active:scale-[.99] transition">🧩 Mashq</button>
-        <button id="js-match" class="rounded-2xl bg-card border border-line font-semibold py-3 text-center active:scale-[.99] transition">🎮 Moslashtirish</button></div>`;
+      const actions = `<div class="grid grid-cols-3 gap-2">
+        <button id="js-quiz" class="rounded-2xl bg-accent text-accent-ink font-semibold py-3 text-center text-sm active:scale-95 transition">🧩 Mashq</button>
+        <button id="js-match" class="rounded-2xl bg-card border border-line font-semibold py-3 text-center text-sm active:scale-95 transition">🎮 Juftlash</button>
+        <button id="js-spell" class="rounded-2xl bg-card border border-line font-semibold py-3 text-center text-sm active:scale-95 transition">✍️ Yozish</button></div>`;
       renderCards(words, actions);
-      document.getElementById("js-quiz").addEventListener("click", () => startQuiz(words, () => showWords(book, unit)));
-      document.getElementById("js-match").addEventListener("click", () => startMatch(words, () => showWords(book, unit)));
+      const reload = () => showWords(book, unit);
+      document.getElementById("js-quiz").addEventListener("click", () => startQuiz(words, reload));
+      document.getElementById("js-match").addEventListener("click", () => startMatch(words, reload));
+      document.getElementById("js-spell").addEventListener("click", () => startSpell(words, reload));
+    }
+
+    // ---- spelling game (type the English word for a given Uzbek meaning) --
+    function startSpell(words, back) {
+      const qs = shuffle(words.filter((w) => w.uz && w.en)).slice(0, 10);
+      if (!qs.length) return message("Yozish uchun so'z yo'q.");
+      let i = 0, score = 0;
+      setBack(back);
+
+      function render() {
+        if (i >= qs.length) return result();
+        const w = qs[i];
+        setHeader(`Yozish ${i + 1}/${qs.length}`, `Ball: ${score}`);
+        contentEl.className = "px-4 py-6 pb-20 space-y-4";
+        contentEl.innerHTML =
+          `<div class="text-center"><div class="text-xl font-semibold">${esc(w.uz)}</div>${w.definition ? `<div class="text-xs text-muted mt-1">${esc(w.definition)}</div>` : ""}</div>
+           <input id="js-spell-in" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" placeholder="Inglizcha yozing…" class="w-full rounded-2xl bg-card border border-line px-4 py-3 text-[15px] text-ink outline-none" />
+           <button id="js-check" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3">Tekshirish</button>
+           <p id="js-sres" class="text-center text-sm"></p>`;
+        const input = document.getElementById("js-spell-in");
+        input.focus();
+        function check() {
+          if (input.disabled) return;
+          const ok = input.value.trim().toLowerCase() === w.en.toLowerCase();
+          if (ok) score++;
+          input.disabled = true;
+          input.classList.add("ring-2", ok ? "ring-emerald-400" : "ring-rose-400");
+          document.getElementById("js-sres").innerHTML = ok
+            ? '<span class="text-emerald-400">✅ To\'g\'ri</span>'
+            : `<span class="text-rose-400">❌ ${esc(w.en)}</span>`;
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(ok ? "success" : "error");
+          setTimeout(() => { i++; render(); }, 900);
+        }
+        document.getElementById("js-check").addEventListener("click", check);
+        input.addEventListener("keydown", (e) => { if (e.key === "Enter") check(); });
+      }
+
+      function result() {
+        setHeader("Natija", "Yozish tugadi");
+        contentEl.className = "px-4 py-16 pb-20 text-center space-y-4";
+        contentEl.innerHTML =
+          `<div class="text-5xl font-bold tracking-tight">${score}/${qs.length}</div>
+           <button id="js-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`;
+        document.getElementById("js-again").addEventListener("click", () => startSpell(words, back));
+      }
+      render();
     }
 
     // ---- matching game (client-side; pair en <-> uz) ----------------------
