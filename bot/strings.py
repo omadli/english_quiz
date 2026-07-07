@@ -124,3 +124,23 @@ QUIZ_PAUSED = (
 QUIZ_RESULT = "🏁 <b>Mashq tugadi!</b>\nNatija: <b>{correct}/{total}</b> to'g'ri 🎯"
 BTN_ALL_UNITS = "🗂 Hammasi"
 BTN_START = "🚀 Boshlash"
+BTN_NEXT_STEP = "Keyingi ➡️"
+BTN_DONE_TYPES = "✅ Tayyor"
+
+QUIZ_PICK_COUNT = "🔢 Nechta savol bo'lsin?"
+QUIZ_PICK_TIME = "⏱ Har savolga necha soniya?"
+QUIZ_PICK_TYPES = "🎲 Savol turlarini tanlang, so'ng «✅ Tayyor»:"
+QUIZ_TYPE_LABELS = {"en_uz": "🇬🇧→🇺🇿 EN→UZ", "uz_en": "🇺🇿→🇬🇧 UZ→EN", "def_word": "📖 Ta'rif→so'z"}
+
+QUIZ_SUMMARY = (
+    "🎯 <b>Test tayyor!</b>\n\n"
+    "📚 <b>{book}</b>\n"
+    "🗂 Bo'limlar: <b>{units}</b>\n"
+    "✏️ <b>{count} ta savol</b>  ·  ⏱ <b>{time} soniya</b>\n"
+    "🎲 Turlari: <b>{types}</b>"
+)
+BTN_START_HERE = "▶️ Bu testni boshlash"
+BTN_START_GROUP = "👥 Guruhda testni boshlash"
+BTN_SHARE = "🔗 Testni ulashish"
+QUIZ_READY_PROMPT = "Tayyormisiz? 🎯"
+SHARE_TEXT = "🧠 Men bu testni sizga ulashdim! Botga o'ting va mashq qiling 👇"
