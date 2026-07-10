@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.http import require_POST
 
 from apps.accounts.models import TelegramAccount
 from apps.accounts.services.login import request_login_code, verify_login_code
@@ -77,6 +78,7 @@ def dashboard(request):
     return render(request, "web/dashboard.html")
 
 
+@require_POST  # a GET <img src="/logout/"> must not be able to log the user out
 def logout_view(request):
     logout(request)
     return redirect("/login/")

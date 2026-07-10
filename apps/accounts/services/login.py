@@ -23,7 +23,7 @@ def resolve_account(identifier: str) -> TelegramAccount | None:
     if not ident:
         return None
     account = TelegramAccount.objects.select_related("user").filter(username__iexact=ident).first()
-    if account is None and ident.isdigit():
+    if account is None and ident.isdigit() and len(ident) <= 15:  # cap: E.164 max, fits bigint
         user = User.objects.filter(phone_number=int(ident)).first()
         account = getattr(user, "telegram", None) if user else None
     return account

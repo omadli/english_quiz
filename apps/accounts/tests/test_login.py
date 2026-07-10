@@ -38,6 +38,11 @@ def test_resolve_unknown_returns_none():
     assert svc.resolve_account("") is None
 
 
+def test_resolve_overlong_digits_no_crash():
+    # a 25-digit "phone" would overflow bigint → must be skipped, not raise DataError
+    assert svc.resolve_account("9" * 25) is None
+
+
 # ---- request_login_code -----------------------------------------------------
 def test_request_code_success_creates_and_sends(monkeypatch):
     _user()
@@ -116,6 +121,11 @@ def test_dashboard_requires_login(client):
     resp = client.get("/app/")
     assert resp.status_code == 302
     assert "/login/" in resp.url
+
+
+def test_logout_rejects_get(client):
+    # logout must be POST-only (a GET <img src> must not log users out)
+    assert client.get("/logout/").status_code == 405
 
 
 def test_login_page_renders_and_sets_csrf_cookie(client):
