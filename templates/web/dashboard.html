@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kabinet — Essential Words</title>
+  <style>
+    :root { --bg:#0b1020; --card:#151b2e; --line:#26304a; --ink:#eef2ff; --muted:#8b96b3; --accent:#6366f1; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(120% 120% at 50% 0%, #16203c 0%, var(--bg) 60%);
+           color:var(--ink); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    .wrap { max-width:720px; margin:0 auto; padding:20px 18px 60px; }
+    .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+    .brand { font-weight:700; letter-spacing:-.02em; }
+    .logout { background:none; border:1px solid var(--line); color:var(--muted); border-radius:12px;
+              padding:8px 14px; font-size:13px; cursor:pointer; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:26px 22px; }
+    .hi { font-size:22px; font-weight:700; letter-spacing:-.02em; }
+    .muted { color:var(--muted); font-size:14px; margin:8px 0 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <span class="brand">🧠 Essential Words</span>
+      <form method="post" action="/logout/">{% csrf_token %}<button class="logout">Chiqish</button></form>
+    </div>
+    <div class="card">
+      <div class="hi">Salom, {{ user.first_name|default:"do'st" }}! 👋</div>
+      <p class="muted">Shaxsiy kabinet tez orada — statistika, streak, o'rganish progressi shu yerda bo'ladi.</p>
+    </div>
+  </div>
+</body>
+</html>

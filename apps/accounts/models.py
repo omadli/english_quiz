@@ -60,6 +60,22 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.full_name or str(self.pk)
 
 
+class LoginCode(TimeStampedModel):
+    """A short-lived one-time code DM'd to the user's Telegram for web login."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="login_codes")
+    code = models.CharField(max_length=6)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "used"])]
+
+    def __str__(self) -> str:
+        return f"LoginCode(user={self.user_id}, used={self.used})"
+
+
 class TelegramAccount(TimeStampedModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="telegram")
     telegram_id = models.BigIntegerField(unique=True, db_index=True)

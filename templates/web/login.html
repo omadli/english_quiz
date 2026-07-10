@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kirish — Essential Words</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root { --bg:#0b1020; --card:#151b2e; --line:#26304a; --ink:#eef2ff; --muted:#8b96b3;
+            --accent:#6366f1; --accent-ink:#fff; --err:#fb7185; --ok:#34d399; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px;
+           background:radial-gradient(120% 120% at 50% 0%, #16203c 0%, var(--bg) 60%);
+           color:var(--ink); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    .card { width:100%; max-width:380px; background:var(--card); border:1px solid var(--line);
+            border-radius:22px; padding:28px 24px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+    .logo { font-size:44px; text-align:center; }
+    h1 { margin:8px 0 4px; text-align:center; font-size:22px; letter-spacing:-.02em; }
+    .sub { margin:0 0 20px; text-align:center; color:var(--muted); font-size:13.5px; }
+    input { width:100%; padding:13px 15px; margin-bottom:12px; border-radius:14px;
+            background:#0f1526; border:1px solid var(--line); color:var(--ink); font-size:16px; outline:none; }
+    input:focus { border-color:var(--accent); }
+    #code { text-align:center; letter-spacing:.4em; font-weight:700; }
+    button { width:100%; padding:13px; border:0; border-radius:14px; background:var(--accent);
+             color:var(--accent-ink); font-size:15px; font-weight:600; cursor:pointer; }
+    button:disabled { opacity:.6; }
+    button.link { background:none; color:var(--muted); font-weight:500; margin-top:6px; padding:8px; }
+    .hint { margin:0 0 12px; color:var(--muted); font-size:13px; text-align:center; }
+    .msg { margin:14px 0 0; text-align:center; font-size:13px; color:var(--ok); min-height:1.2em; }
+    .msg.err { color:var(--err); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🧠</div>
+    <h1>Essential Words</h1>
+    <p class="sub">Kirish uchun Telegram username'ingizni kiriting</p>
+    <div id="step-id">
+      <input id="ident" placeholder="@username" autocomplete="username" autocapitalize="off" autocorrect="off">
+      <button id="btn-code">Kod olish</button>
+    </div>
+    <div id="step-code" style="display:none">
+      <p class="hint">Telegram'ga yuborilgan 6 xonali kodni kiriting</p>
+      <input id="code" inputmode="numeric" maxlength="6" placeholder="000000">
+      <button id="btn-login">Kirish</button>
+      <button id="btn-back" class="link">← Orqaga</button>
+    </div>
+    <p id="msg" class="msg"></p>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const getCookie = (n) => { const m = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return m ? m.pop() : ''; };
+    async function api(url, body) {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') }, body: JSON.stringify(body || {}) });
+      return res.json().catch(() => ({}));
+    }
+    function msg(t, err) { const m = $('msg'); m.textContent = t; m.className = 'msg' + (err ? ' err' : ''); }
+
+    // Inside Telegram → sign in automatically via initData.
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.initData) {
+      tg.ready();
+      fetch('/app/api/session/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ init_data: tg.initData }) })
+        .then((r) => r.json()).then((d) => { if (d.ok) location.href = d.redirect; }).catch(() => {});
+    }
+
+    $('btn-code').addEventListener('click', async () => {
+      const identifier = $('ident').value.trim();
+      if (!identifier) return msg('Username kiriting', true);
+      $('btn-code').disabled = true; msg('Yuborilmoqda…');
+      const d = await api('/app/api/request-code/', { identifier });
+      $('btn-code').disabled = false;
+      if (d.ok) {
+        $('step-id').style.display = 'none'; $('step-code').style.display = 'block'; $('code').focus();
+        msg("Kod Telegram'ga yuborildi ✅");
+      } else {
+        msg({
+          not_found: "Topilmadi — botni /start qilganingizga va @username borligiga ishonch hosil qiling (yoki ilovani Telegram ichida oching).",
+          throttled: 'Kod yaqinda yuborilgan — biroz kuting.',
+          send_failed: "Yuborib bo'lmadi — avval botni /start qiling.",
+        }[d.error] || 'Xatolik yuz berdi', true);
+      }
+    });
+    $('btn-login').addEventListener('click', async () => {
+      const code = $('code').value.trim(), identifier = $('ident').value.trim();
+      if (code.length < 6) return msg('6 xonali kodni kiriting', true);
+      $('btn-login').disabled = true; msg('Tekshirilmoqda…');
+      const d = await api('/app/api/verify-code/', { identifier, code });
+      $('btn-login').disabled = false;
+      if (d.ok) location.href = d.redirect; else msg("Kod noto'g'ri yoki eskirgan", true);
+    });
+    $('btn-back').addEventListener('click', () => { $('step-code').style.display = 'none'; $('step-id').style.display = 'block'; msg(''); });
+    $('ident').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-code').click(); });
+    $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-login').click(); });
+  </script>
+</body>
+</html>

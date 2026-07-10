@@ -68,6 +68,7 @@ DATABASES = {"default": env.db("DATABASE_URL", default="sqlite:///" + str(BASE_D
 CACHES = {"default": env.cache("REDIS_URL", default="locmemcache://")}
 
 AUTH_USER_MODEL = "accounts.User"
+LOGIN_URL = "/login/"  # passwordless web login (Faza 5)
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
