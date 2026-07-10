@@ -49,6 +49,9 @@ class Unit(TimeStampedModel):
     title = models.CharField(max_length=200, blank=True)
     slug = models.SlugField(max_length=200, blank=True)
     word_count = models.PositiveIntegerField(default=0)
+    telegram_audio_file_id = models.CharField(  # cached after first TTS upload
+        max_length=200, blank=True, default=""
+    )
 
     class Meta:
         ordering = ("book", "number")

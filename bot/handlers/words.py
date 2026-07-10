@@ -1,9 +1,12 @@
+import asyncio
+
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from asgiref.sync import sync_to_async
 from django.utils.html import escape, strip_tags
 
 from apps.catalog.models import Book, Unit, Word
+from apps.common.tts import get_tts_provider
 from bot import strings
 from bot.keyboards.words import (
     words_back_keyboard,
@@ -12,6 +15,23 @@ from bot.keyboards.words import (
 )
 
 router = Router()
+
+
+def _unit_audio_file_id(unit_id: int) -> str:
+    return (
+        Unit.objects.filter(pk=unit_id).values_list("telegram_audio_file_id", flat=True).first()
+        or ""
+    )
+
+
+def _cache_unit_audio(unit_id: int, file_id: str) -> None:
+    Unit.objects.filter(pk=unit_id).update(telegram_audio_file_id=file_id)
+
+
+def _synth_unit_mp3(words: list[Word]) -> bytes:
+    """One MP3 reading the unit's English words in order (gTTS)."""
+    text = ". ".join(w.en for w in words)
+    return get_tts_provider().synthesize(text, lang="en")
 
 
 def _active_books() -> list[Book]:
@@ -133,3 +153,34 @@ async def wl_detail(callback: CallbackQuery) -> None:
     blocks = [_detail_block(i, w) for i, w in enumerate(words, start=1)]
     for message in _pack(header, blocks):
         await callback.message.answer(message)
+
+
+@router.callback_query(F.data.startswith("wl:audio:"))
+async def wl_audio(callback: CallbackQuery) -> None:
+    unit_id = int(callback.data.split(":")[-1])
+    file_id = await sync_to_async(_unit_audio_file_id)(unit_id)
+    if file_id:  # cached from a previous upload — no re-synthesis
+        await callback.answer()
+        await callback.message.answer_audio(file_id)
+        return
+
+    await callback.answer(strings.AUDIO_PREPARING)
+    result = await sync_to_async(_unit_with_words)(unit_id)
+    if result is None:
+        return
+    unit, words = result
+    if not words:
+        await callback.message.answer(strings.WORDS_EMPTY)
+        return
+    try:
+        data = await asyncio.to_thread(_synth_unit_mp3, words)  # gTTS: blocking network call
+    except Exception:
+        await callback.message.answer(strings.AUDIO_FAILED)
+        return
+    msg = await callback.message.answer_audio(
+        BufferedInputFile(data, filename=f"unit-{unit.number}.mp3"),
+        title=f"Unit {unit.number}",
+        performer=unit.book.title,
+    )
+    if msg.audio:
+        await sync_to_async(_cache_unit_audio)(unit_id, msg.audio.file_id)

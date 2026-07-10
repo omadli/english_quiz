@@ -27,8 +27,13 @@ def words_units_keyboard(units: list) -> InlineKeyboardMarkup:
 
 def words_back_keyboard(book_id: int, unit_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text=strings.BTN_DETAIL, callback_data=f"wl:detail:{unit_id}"),
-            InlineKeyboardButton(text=strings.BTN_BACK, callback_data=f"wl:units:{book_id}"),
-        ]]
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=strings.BTN_DETAIL, callback_data=f"wl:detail:{unit_id}"
+                ),
+                InlineKeyboardButton(text=strings.BTN_AUDIO, callback_data=f"wl:audio:{unit_id}"),
+            ],
+            [InlineKeyboardButton(text=strings.BTN_BACK, callback_data=f"wl:units:{book_id}")],
+        ]
     )

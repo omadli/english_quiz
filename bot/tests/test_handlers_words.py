@@ -84,3 +84,50 @@ async def test_wl_detail_sends_messages(mock_uw):
     await words.wl_detail(callback)
     callback.message.answer.assert_awaited()
     assert "afraid" in callback.message.answer.call_args.args[0]
+
+
+@patch("bot.handlers.words._synth_unit_mp3")
+@patch("bot.handlers.words._unit_audio_file_id", return_value="CACHED_FILE_ID")
+async def test_wl_audio_uses_cached_file_id(mock_fid, mock_synth):
+    """A cached Telegram file_id is re-sent directly — no gTTS synthesis."""
+    callback = AsyncMock()
+    callback.data = "wl:audio:5"
+    await words.wl_audio(callback)
+    callback.message.answer_audio.assert_awaited_once_with("CACHED_FILE_ID")
+    mock_synth.assert_not_called()
+
+
+@patch("bot.handlers.words._cache_unit_audio")
+@patch("bot.handlers.words._synth_unit_mp3", return_value=b"ID3mp3bytes")
+@patch("bot.handlers.words._unit_with_words")
+@patch("bot.handlers.words._unit_audio_file_id", return_value="")
+async def test_wl_audio_synthesizes_and_caches(mock_fid, mock_uw, mock_synth, mock_cache):
+    """No cache → synthesize, send the MP3, then cache the returned file_id."""
+    unit = MagicMock(number=3)
+    unit.book.title = "Book 1"
+    mock_uw.return_value = (unit, [MagicMock(en="afraid"), MagicMock(en="angry")])
+    sent = MagicMock()
+    sent.audio.file_id = "NEW_FILE_ID"
+    callback = AsyncMock()
+    callback.data = "wl:audio:5"
+    callback.message.answer_audio.return_value = sent
+
+    await words.wl_audio(callback)
+
+    mock_synth.assert_called_once()
+    callback.message.answer_audio.assert_awaited()
+    mock_cache.assert_called_once_with(5, "NEW_FILE_ID")
+
+
+@patch("bot.handlers.words._synth_unit_mp3", side_effect=RuntimeError("gTTS down"))
+@patch("bot.handlers.words._unit_with_words")
+@patch("bot.handlers.words._unit_audio_file_id", return_value="")
+async def test_wl_audio_synthesis_failure_is_graceful(mock_fid, mock_uw, mock_synth):
+    """A gTTS failure tells the user instead of crashing the handler."""
+    unit = MagicMock(number=3)
+    unit.book.title = "Book 1"
+    mock_uw.return_value = (unit, [MagicMock(en="afraid")])
+    callback = AsyncMock()
+    callback.data = "wl:audio:5"
+    await words.wl_audio(callback)
+    assert strings.AUDIO_FAILED in callback.message.answer.call_args.args
