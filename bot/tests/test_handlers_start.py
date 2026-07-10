@@ -59,53 +59,53 @@ async def test_start_without_payload_does_not_redeem(mock_redeem):
     mock_redeem.assert_not_called()
 
 
+_CFG = {"book_id": 1, "unit_ids": [10], "count": 15, "interval": 20, "types": ["en_uz"]}
+
+
 @patch("bot.handlers.start.asyncio.create_task")
 @patch("bot.handlers.start.start_shared_quiz", new_callable=MagicMock)
-@patch("bot.handlers.start.get_shared_quiz")
-async def test_start_quiz_deep_link_launches_shared_quiz(mock_get, mock_launch, mock_task):
-    """`?start=quiz_<id>` loads the config and schedules the shared quiz, skipping onboarding."""
-    quiz = MagicMock(
-        unit_ids=[10], question_count=15, interval_seconds=20, question_types=["en_uz"]
-    )
-    mock_get.return_value = quiz
+@patch("bot.handlers.start.load_quiz")
+async def test_start_code_deep_link_launches_shared_quiz(mock_load, mock_launch, mock_task):
+    """`?start=<code>` decodes the config and schedules the shared quiz, skipping onboarding."""
+    mock_load.return_value = _CFG
     message = AsyncMock()
     message.chat.id = 777
 
     await start_handler.cmd_start(
-        message, _state(), _cmd(args="quiz_42"), user=MagicMock(), profile=MagicMock()
+        message, _state(), _cmd(args="b1u1c15t20qE"), user=MagicMock(), profile=MagicMock()
     )
 
-    mock_get.assert_called_once_with("42")
+    mock_load.assert_called_once_with("b1u1c15t20qE")
     mock_launch.assert_called_once_with(message.bot, 777, [10], 15, 20, ["en_uz"])
     mock_task.assert_called_once()
     mock_task.call_args.args[0].close()  # close the un-awaited coroutine
 
 
-@patch("bot.handlers.start.seed_group_quiz_from_shared", new_callable=AsyncMock)
-@patch("bot.handlers.start.get_shared_quiz")
-async def test_start_quiz_deep_link_in_group_seeds_group(mock_get, mock_seed):
-    """`?startgroup=quiz_<id>` (delivered as /start in a group) seeds a group quiz."""
-    quiz = MagicMock()
-    mock_get.return_value = quiz
+@patch("bot.handlers.start.seed_group_quiz_from_config", new_callable=AsyncMock)
+@patch("bot.handlers.start.load_quiz")
+async def test_start_code_deep_link_in_group_seeds_group(mock_load, mock_seed):
+    """`?startgroup=<code>` (delivered as /start in a group) seeds a group quiz."""
+    mock_load.return_value = _CFG
     message = AsyncMock()
     message.chat.id = -100
     message.chat.type = "supergroup"
     message.from_user.id = 555
 
     await start_handler.cmd_start(
-        message, _state(), _cmd(args="quiz_42"), user=MagicMock(), profile=MagicMock()
+        message, _state(), _cmd(args="b1u1c15t20qE"), user=MagicMock(), profile=MagicMock()
     )
-    mock_seed.assert_awaited_once_with(message.bot, -100, 555, quiz)
+    mock_seed.assert_awaited_once_with(message.bot, -100, 555, _CFG)
 
 
 @patch("bot.handlers.start.start_shared_quiz", new_callable=MagicMock)
-@patch("bot.handlers.start.get_shared_quiz", return_value=None)
-async def test_start_quiz_deep_link_unknown_falls_through(mock_get, mock_launch):
-    """An unknown/expired quiz token doesn't launch — falls through to the normal welcome."""
+@patch("bot.handlers.start.load_quiz", return_value=None)
+async def test_start_bad_code_falls_through(mock_load, mock_launch):
+    """An undecodable/unknown code doesn't launch — falls through to the normal welcome."""
     profile = MagicMock(onboarded=True)
     message = AsyncMock()
+    # non-"g" payload so it doesn't hit the referral path; load_quiz mocked to None
     await start_handler.cmd_start(
-        message, _state(), _cmd(args="quiz_999"), user=MagicMock(), profile=profile
+        message, _state(), _cmd(args="xyz123"), user=MagicMock(), profile=profile
     )
     mock_launch.assert_not_called()
     message.answer.assert_awaited()  # got the welcome-back instead

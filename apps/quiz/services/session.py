@@ -24,11 +24,13 @@ def start_configuring(chat_id: int, user_id: int) -> GroupQuizSession | None:
     )
 
 
-def create_group_session_from_shared(chat_id: int, user_id: int, shared) -> GroupQuizSession | None:
-    """Seed a group session from a SharedQuiz (the `?startgroup=quiz_<id>` flow).
+def create_group_session_from_config(
+    chat_id: int, user_id: int, config: dict
+) -> GroupQuizSession | None:
+    """Seed a group session from a decoded share config (the `?startgroup=<code>` flow).
 
-    Returns None if a quiz is already active in this chat, mirroring
-    ``start_configuring``.
+    `config` = {book_id, unit_ids, count, interval, types}. Returns None if a
+    quiz is already active in this chat, mirroring ``start_configuring``.
     """
     if get_active_session(chat_id) is not None:
         return None
@@ -36,11 +38,11 @@ def create_group_session_from_shared(chat_id: int, user_id: int, shared) -> Grou
         chat_id=chat_id,
         started_by_telegram_id=user_id,
         status=GroupQuizSession.Status.CONFIGURING,
-        book_id=shared.book_id,
-        unit_ids=list(shared.unit_ids),
-        question_types=list(shared.question_types),
-        question_count=shared.question_count,
-        interval_seconds=shared.interval_seconds,
+        book_id=config["book_id"],
+        unit_ids=list(config["unit_ids"]),
+        question_types=list(config["types"]),
+        question_count=config["count"],
+        interval_seconds=config["interval"],
     )
 
 

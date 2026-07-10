@@ -10,10 +10,10 @@ from asgiref.sync import sync_to_async
 
 from apps.accounts.models import User
 from apps.learning.models import LearningProfile, default_weekdays
-from apps.quiz.services.share import get_shared_quiz
+from apps.quiz.services.quiz_code import load_quiz
 from apps.relations.services.referral import redeem_token
 from bot import strings
-from bot.handlers.group_quiz import seed_group_quiz_from_shared
+from bot.handlers.group_quiz import seed_group_quiz_from_config
 from bot.handlers.menu import menu_keyboard, show_menu
 from bot.handlers.quiz_practice import start_shared_quiz
 from bot.keyboards.onboarding import intro_keyboard, words_keyboard
@@ -42,19 +42,17 @@ async def cmd_start(
 ) -> None:
     await state.clear()
     payload = command.args or ""
-    if payload.startswith("quiz_"):
-        quiz = await sync_to_async(get_shared_quiz)(payload[len("quiz_"):])
-        if quiz is not None:
+    if payload:
+        config = await sync_to_async(load_quiz)(payload)  # decode the self-contained share code
+        if config is not None:
             if message.chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
-                # ?startgroup=quiz_<id> → run it as a group quiz with the ready-check
-                await seed_group_quiz_from_shared(
-                    message.bot, message.chat.id, message.from_user.id, quiz
+                await seed_group_quiz_from_config(
+                    message.bot, message.chat.id, message.from_user.id, config
                 )
             else:
                 asyncio.create_task(start_shared_quiz(
-                    message.bot, message.chat.id,
-                    list(quiz.unit_ids), quiz.question_count,
-                    quiz.interval_seconds, list(quiz.question_types),
+                    message.bot, message.chat.id, config["unit_ids"],
+                    config["count"], config["interval"], config["types"],
                 ))
             return
     if payload.startswith("g"):

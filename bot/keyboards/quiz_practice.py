@@ -50,9 +50,25 @@ def quiz_types_keyboard(selected: set) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def quiz_summary_keyboard(has_group: bool) -> InlineKeyboardMarkup:
+def quiz_summary_keyboard(code: str, username: str | None) -> InlineKeyboardMarkup:
+    """Summary card actions. `code` self-contains the config; it flows into the
+    group startgroup deep-link and the inline share (both charset-safe)."""
     rows = [[InlineKeyboardButton(text=strings.BTN_START_HERE, callback_data="pq:start")]]
-    if has_group:  # needs BOT_USERNAME to build the startgroup deep link
-        rows.append([InlineKeyboardButton(text=strings.BTN_START_GROUP, callback_data="pq:group")])
-    rows.append([InlineKeyboardButton(text=strings.BTN_SHARE, callback_data="pq:share")])
+    if username:  # startgroup deep-link needs the bot username
+        rows.append([InlineKeyboardButton(
+            text=strings.BTN_START_GROUP, url=f"https://t.me/{username}?startgroup={code}"
+        )])
+    # switch_inline_query opens a chat picker and pre-fills the shareable code
+    rows.append([InlineKeyboardButton(text=strings.BTN_SHARE, switch_inline_query=code)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def shared_card_keyboard(code: str, username: str) -> InlineKeyboardMarkup:
+    """Buttons on the inline-shared card: start personal / start in group / re-share."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=strings.BTN_START_HERE, url=f"https://t.me/{username}?start={code}")],
+        [InlineKeyboardButton(
+            text=strings.BTN_START_GROUP, url=f"https://t.me/{username}?startgroup={code}"
+        )],
+        [InlineKeyboardButton(text=strings.BTN_SHARE, switch_inline_query=code)],
+    ])

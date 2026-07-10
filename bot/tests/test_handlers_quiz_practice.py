@@ -57,14 +57,20 @@ async def test_pq_count_advances_to_time():
     cb.message.edit_text.assert_awaited()
 
 
-@patch("bot.handlers.quiz_practice._summary_data", return_value=("Book 1", [1, 2]))
-async def test_pq_types_done_shows_summary(mock_sum):
+@patch("bot.handlers.quiz_practice._summary_and_code",
+       return_value=("Book 1", [1, 2], "b1u1-2c20t30qEUD"))
+async def test_pq_types_done_shows_summary_with_code(mock_sum):
     cb, state = AsyncMock(), AsyncMock()
     state.get_data.return_value = {"book_id": 1, "sel": [10, 11], "count": 20, "interval": 30}
     await qp.pq_types_done(cb, state)
     cb.message.edit_text.assert_awaited()
     text = cb.message.edit_text.call_args.args[0]
     assert "Book 1" in text and "20" in text
+    # the share button carries the self-contained code (switch_inline_query)
+    kb = cb.message.edit_text.call_args.kwargs["reply_markup"]
+    codes = [b.switch_inline_query for row in kb.inline_keyboard for b in row
+             if b.switch_inline_query]
+    assert "b1u1-2c20t30qEUD" in codes
 
 
 @patch("bot.handlers.quiz_practice.asyncio.create_task")
@@ -82,73 +88,31 @@ async def test_pq_start_builds_and_launches(mock_build, mock_run, mock_task):
 
 
 @patch("bot.handlers.quiz_practice.dj_settings")
-@patch("bot.handlers.quiz_practice.save_shared_quiz")
-async def test_pq_share_persists_config_and_sends_deep_link(mock_save, mock_settings):
+@patch("bot.handlers.quiz_practice.card_for")
+async def test_inline_share_returns_card_with_action_buttons(mock_card, mock_settings):
+    """Inline query = the share code → a card whose buttons start personal/group + re-share."""
     mock_settings.BOT_USERNAME = "learn_bot"
-    mock_save.return_value = MagicMock(id=7)
-    cb, state = AsyncMock(), AsyncMock()
-    cb.from_user.id = 555
-    state.get_data.return_value = {
-        "book_id": 1, "sel": [10, 11], "count": 15, "interval": 20, "types": ["en_uz"]
+    mock_card.return_value = {
+        "book": "Book 1", "units": "1–4", "count": 10, "interval": 30, "types": ["en_uz"]
     }
-    await qp.pq_share(cb, state)
-    mock_save.assert_called_once_with(555, 1, [10, 11], 15, 20, ["en_uz"])
-    # first message carries the forwardable deep-link button
-    kb = cb.message.answer.await_args_list[0].kwargs["reply_markup"]
-    assert "start=quiz_7" in kb.inline_keyboard[0][0].url
-
-
-@patch("bot.handlers.quiz_practice.dj_settings")
-async def test_pq_share_without_username_warns(mock_settings):
-    mock_settings.BOT_USERNAME = ""
-    cb, state = AsyncMock(), AsyncMock()
-    await qp.pq_share(cb, state)
-    assert strings.SHARE_NO_USERNAME in cb.message.answer.call_args.args
-
-
-@patch("bot.handlers.quiz_practice.dj_settings")
-@patch("bot.handlers.quiz_practice.save_shared_quiz")
-async def test_pq_group_sends_startgroup_link(mock_save, mock_settings):
-    mock_settings.BOT_USERNAME = "learn_bot"
-    mock_save.return_value = MagicMock(id=7)
-    cb, state = AsyncMock(), AsyncMock()
-    cb.from_user.id = 555
-    state.get_data.return_value = {
-        "book_id": 1, "sel": [10], "count": 10, "interval": 30, "types": ["en_uz"]
-    }
-    await qp.pq_group(cb, state)
-    kb = cb.message.answer.call_args.kwargs["reply_markup"]
-    assert "startgroup=quiz_7" in kb.inline_keyboard[0][0].url
-
-
-@patch("bot.handlers.quiz_practice.save_shared_quiz")
-async def test_ensure_shared_reuses_existing_id(mock_save):
-    """Tapping share then group (or vice-versa) reuses one SharedQuiz row."""
-    state = AsyncMock()
-    state.get_data.return_value = {"shared_id": 99}
-    assert await qp._ensure_shared(state, 555) == 99
-    mock_save.assert_not_called()
-
-
-@patch("bot.handlers.quiz_practice.dj_settings")
-@patch("bot.handlers.quiz_practice.recent_shared_quizzes")
-async def test_inline_share_lists_user_quizzes(mock_recent, mock_settings):
-    mock_settings.BOT_USERNAME = "learn_bot"
-    mock_recent.return_value = [{"id": 7, "title": "🧠 B1 — 10 savol", "desc": "2 bo'lim · 30s"}]
     query = AsyncMock()
-    query.from_user.id = 555
+    query.query = "b1u1-4c10t30qE"
     await qp.inline_share(query)
     results = query.answer.await_args.args[0]
-    assert results[0].id == "7"
-    assert "start=quiz_7" in results[0].reply_markup.inline_keyboard[0][0].url
+    assert results[0].id == "b1u1-4c10t30qE"
+    buttons = [b for row in results[0].reply_markup.inline_keyboard for b in row]
+    urls = [b.url for b in buttons if b.url]
+    assert any("start=b1u1-4c10t30qE" in u for u in urls)        # personal deep link
+    assert any("startgroup=b1u1-4c10t30qE" in u for u in urls)   # group deep link
+    assert any(b.switch_inline_query == "b1u1-4c10t30qE" for b in buttons)  # re-share
 
 
 @patch("bot.handlers.quiz_practice.dj_settings")
-@patch("bot.handlers.quiz_practice.recent_shared_quizzes", return_value=[])
-async def test_inline_share_empty_shows_hint(mock_recent, mock_settings):
+@patch("bot.handlers.quiz_practice.card_for", return_value=None)
+async def test_inline_share_invalid_code_shows_hint(mock_card, mock_settings):
     mock_settings.BOT_USERNAME = "learn_bot"
     query = AsyncMock()
-    query.from_user.id = 555
+    query.query = "garbage"
     await qp.inline_share(query)
     results = query.answer.await_args.args[0]
     assert results[0].id == "none"

@@ -180,14 +180,15 @@ async def test_go_quiz_blocks_when_no_one_ready(mock_get_session, mock_create_ta
         group_quiz._ready.pop(8, None)
 
 
-@patch("bot.handlers.group_quiz.create_group_session_from_shared")
+@patch("bot.handlers.group_quiz.create_group_session_from_config")
 async def test_seed_group_quiz_opens_ready_check(mock_create):
-    """`?startgroup=quiz_<id>` seeds a session and posts the ready-check."""
+    """`?startgroup=<code>` seeds a session from a config and posts the ready-check."""
     mock_create.return_value = MagicMock(id=12)
     group_quiz._ready.pop(12, None)
     bot = AsyncMock()
+    cfg = {"book_id": 1, "unit_ids": [1, 2], "count": 10, "interval": 30, "types": ["en_uz"]}
     try:
-        await group_quiz.seed_group_quiz_from_shared(bot, -100, 555, MagicMock())
+        await group_quiz.seed_group_quiz_from_config(bot, -100, 555, cfg)
         assert group_quiz._ready[12] == {}
         bot.send_message.assert_awaited_once()
         assert bot.send_message.call_args.kwargs.get("reply_markup") is not None
@@ -195,11 +196,11 @@ async def test_seed_group_quiz_opens_ready_check(mock_create):
         group_quiz._ready.pop(12, None)
 
 
-@patch("bot.handlers.group_quiz.create_group_session_from_shared", return_value=None)
+@patch("bot.handlers.group_quiz.create_group_session_from_config", return_value=None)
 async def test_seed_group_quiz_blocks_when_active(mock_create):
     """If a quiz is already running in the chat, the seed just says so."""
     bot = AsyncMock()
-    await group_quiz.seed_group_quiz_from_shared(bot, -100, 555, MagicMock())
+    await group_quiz.seed_group_quiz_from_config(bot, -100, 555, {})
     assert group_quiz._ALREADY in bot.send_message.call_args.args
 
 

@@ -10,7 +10,7 @@ from asgiref.sync import sync_to_async
 from apps.quiz.models import GroupQuizSession
 from apps.quiz.services.session import (
     abort_active,
-    create_group_session_from_shared,
+    create_group_session_from_config,
     get_active_session,
     set_book,
     set_count,
@@ -55,9 +55,9 @@ def _ready_text(names: list[str]) -> str:
     return text
 
 
-async def seed_group_quiz_from_shared(bot: Bot, chat_id: int, user_id: int, shared) -> None:
-    """`?startgroup=quiz_<id>` landed in a group → seed the session and open the ready-check."""
-    session = await sync_to_async(create_group_session_from_shared)(chat_id, user_id, shared)
+async def seed_group_quiz_from_config(bot: Bot, chat_id: int, user_id: int, config: dict) -> None:
+    """`?startgroup=<code>` landed in a group → seed the session and open the ready-check."""
+    session = await sync_to_async(create_group_session_from_config)(chat_id, user_id, config)
     if session is None:
         await bot.send_message(chat_id, _ALREADY)
         return
