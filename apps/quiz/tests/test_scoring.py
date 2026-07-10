@@ -63,3 +63,14 @@ def test_build_leaderboard_orders_by_correct_then_time():
     # Fast5 (3 correct, 20s) ranks above Slow5 (3 correct, 50s), both above Two (2 correct)
     assert text.index("Fast5") < text.index("Slow5") < text.index("Two")
     assert "🥇" in text
+
+
+def test_build_leaderboard_escapes_html_in_name():
+    """A '<'/'&' in a display name must be escaped — it's sent with parse_mode=HTML."""
+    s = GroupQuizSession.objects.create(chat_id=-100, status=GroupQuizSession.Status.FINISHED)
+    GroupQuizParticipant.objects.create(
+        session=s, telegram_id=1, full_name="Tom <b> & Jerry", correct_count=1, total_time=1
+    )
+    text = build_leaderboard(s)
+    assert "Tom &lt;b&gt; &amp; Jerry" in text
+    assert "<b> & Jerry" not in text  # raw angle brackets would break the HTML parse

@@ -4,13 +4,22 @@ import logging
 from aiogram import Bot, F, Router
 from aiogram.enums import PollType
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    InlineQuery,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
+    Message,
+)
 from asgiref.sync import sync_to_async
 from django.conf import settings as dj_settings
 
 from apps.catalog.models import Book, Unit
 from apps.learning.services.exam import build_questions
 from apps.quiz.services.questions import sample_words
+from apps.quiz.services.share import recent_shared_quizzes, save_shared_quiz
 from bot import strings
 from bot.handlers.words import _active_books, _book_units
 from bot.keyboards.quiz_practice import (
@@ -169,9 +178,9 @@ async def pq_types_done(callback: CallbackQuery, state: FSMContext) -> None:
         time=data.get("interval", QUIZ_TIMER),
         types=", ".join(strings.QUIZ_TYPE_LABELS[t] for t in types),
     )
-    username = dj_settings.BOT_USERNAME
-    group_url = f"https://t.me/{username}?startgroup=quiz" if username else None
-    await callback.message.edit_text(text, reply_markup=quiz_summary_keyboard(group_url))
+    await callback.message.edit_text(
+        text, reply_markup=quiz_summary_keyboard(bool(dj_settings.BOT_USERNAME))
+    )
 
 
 # ---- summary actions --------------------------------------------------------
@@ -195,12 +204,96 @@ async def pq_start(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
 
+def _share_button(username: str, quiz_id: int) -> InlineKeyboardMarkup:
+    deep_link = f"https://t.me/{username}?start=quiz_{quiz_id}"
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=strings.BTN_START_SHARED, url=deep_link)
+    ]])
+
+
+async def _ensure_shared(state: FSMContext, user_id: int) -> int:
+    """Persist the wizard's config as a SharedQuiz once, reusing it for share+group."""
+    data = await state.get_data()
+    if data.get("shared_id"):
+        return data["shared_id"]
+    quiz = await sync_to_async(save_shared_quiz)(
+        user_id,
+        data.get("book_id"),
+        data.get("sel", []),
+        data.get("count", QUIZ_COUNT),
+        data.get("interval", QUIZ_TIMER),
+        data.get("types"),
+    )
+    await state.update_data(shared_id=quiz.id)
+    return quiz.id
+
+
 @router.callback_query(QuizStates.summary, F.data == "pq:share")
-async def pq_share(callback: CallbackQuery) -> None:
+async def pq_share(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     username = dj_settings.BOT_USERNAME
-    link = f"https://t.me/{username}" if username else ""
-    await callback.message.answer(f"{strings.SHARE_TEXT}\n{link}".strip())
+    if not username:
+        await callback.message.answer(strings.SHARE_NO_USERNAME)
+        return
+    quiz_id = await _ensure_shared(state, callback.from_user.id)
+    # Forwardable message (URL buttons survive forwarding) + inline hint.
+    await callback.message.answer(strings.SHARE_TEXT, reply_markup=_share_button(username, quiz_id))
+    await callback.message.answer(strings.SHARE_INLINE_HINT.format(username=username))
+
+
+@router.callback_query(QuizStates.summary, F.data == "pq:group")
+async def pq_group(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer()
+    username = dj_settings.BOT_USERNAME
+    if not username:
+        await callback.message.answer(strings.SHARE_NO_USERNAME)
+        return
+    quiz_id = await _ensure_shared(state, callback.from_user.id)
+    url = f"https://t.me/{username}?startgroup=quiz_{quiz_id}"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=strings.BTN_PICK_GROUP, url=url)
+    ]])
+    await callback.message.answer(strings.GROUP_PICK_HINT, reply_markup=kb)
+
+
+@router.inline_query()
+async def inline_share(query: InlineQuery) -> None:
+    """`@bot ...` in any chat → insert one of the user's own shared tests."""
+    username = dj_settings.BOT_USERNAME
+    cards = await sync_to_async(recent_shared_quizzes)(query.from_user.id) if username else []
+    if cards:
+        results = [
+            InlineQueryResultArticle(
+                id=str(c["id"]),
+                title=c["title"],
+                description=c["desc"],
+                input_message_content=InputTextMessageContent(message_text=strings.SHARE_TEXT),
+                reply_markup=_share_button(username, c["id"]),
+            )
+            for c in cards
+        ]
+    else:
+        results = [
+            InlineQueryResultArticle(
+                id="none",
+                title=strings.INLINE_NONE_TITLE,
+                description=strings.INLINE_NONE_DESC,
+                input_message_content=InputTextMessageContent(message_text=strings.INLINE_NONE_MSG),
+            )
+        ]
+    await query.answer(results, cache_time=1, is_personal=True)
+
+
+async def start_shared_quiz(
+    bot: Bot, chat_id: int, unit_ids: list[int], count: int, interval: int, types: list[str] | None
+) -> None:
+    """Launch a shared test in `chat_id` (used by the `quiz_<id>` deep link)."""
+    questions = await sync_to_async(_build_quiz)(unit_ids, count, types or None)
+    if not questions:
+        await bot.send_message(chat_id, strings.QUIZ_NO_WORDS)
+        return
+    msg = await bot.send_message(chat_id, strings.QUIZ_READY_PROMPT)
+    await _countdown_then_run(bot, chat_id, msg.message_id, questions, interval)
 
 
 # ---- runner -----------------------------------------------------------------

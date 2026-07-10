@@ -34,6 +34,25 @@ class GroupQuizSession(TimeStampedModel):
         return f"GroupQuizSession(chat={self.chat_id}, {self.status})"
 
 
+class SharedQuiz(TimeStampedModel):
+    """A persisted personal-quiz config so it can travel via a deep link / inline share."""
+
+    created_by_telegram_id = models.BigIntegerField(db_index=True)
+    book = models.ForeignKey(
+        "catalog.Book", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    unit_ids = models.JSONField(default=_empty_list)
+    question_types = models.JSONField(default=_empty_list)
+    question_count = models.PositiveSmallIntegerField(default=10)
+    interval_seconds = models.PositiveSmallIntegerField(default=30)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return f"SharedQuiz(#{self.pk}, by={self.created_by_telegram_id})"
+
+
 class GroupQuizQuestion(TimeStampedModel):
     session = models.ForeignKey(
         GroupQuizSession, on_delete=models.CASCADE, related_name="questions"

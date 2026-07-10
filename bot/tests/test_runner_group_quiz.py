@@ -40,16 +40,21 @@ async def test_run_group_quiz_sends_polls_and_leaderboard(
 
 @patch("bot.runner_group_quiz.asyncio.sleep", new_callable=AsyncMock)
 @patch("bot.runner_group_quiz.finish_and_leaderboard", return_value=(-100, "board"))
-@patch("bot.runner_group_quiz.is_aborted", return_value=True)   # aborted before first question
+@patch("bot.runner_group_quiz.is_aborted", return_value=True)   # aborted before it starts
 @patch("bot.runner_group_quiz.record_poll_sent")
 @patch("bot.runner_group_quiz.pending_questions")
 @patch("bot.runner_group_quiz.prepare_questions")
 async def test_run_group_quiz_stops_when_aborted(
     mock_prepare, mock_pending, mock_record, mock_aborted, mock_finish, mock_sleep
 ):
-    mock_pending.return_value = [
-        {"id": 1, "prompt": "q1", "options": ["a", "b"], "correct_option": 0, "explanation": "e"},
-    ]
+    """A /stop during the ready-check countdown aborts before anything runs.
+
+    The early is_aborted() guard must short-circuit before prepare_questions,
+    so no questions get built (which would clobber the ABORTED status back to
+    RUNNING) and no polls/leaderboard are sent.
+    """
     bot = AsyncMock()
     await runner_group_quiz.run_group_quiz(bot, session_id=7)
+    mock_prepare.assert_not_called()     # aborted → never builds questions / sets RUNNING
+    mock_finish.assert_not_called()      # aborted → no leaderboard for a quiz that never ran
     bot.send_poll.assert_not_awaited()   # aborted → no polls sent

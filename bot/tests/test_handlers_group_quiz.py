@@ -87,37 +87,35 @@ async def test_toggle_unit_cb_no_sync_only_error():
         await sync_to_async(connections.close_all)()
 
 
-@patch("bot.handlers.group_quiz.run_group_quiz")
 @patch("bot.handlers.group_quiz.get_active_session")
-async def test_start_quiz_rejects_non_owner(mock_get_session, mock_run):
-    """A group member who did not start the wizard can't launch the quiz.
+async def test_start_quiz_rejects_non_owner(mock_get_session):
+    """A group member who did not start the wizard can't open the ready-check.
 
     `session.started_by_telegram_id` (111) differs from the tapping user
     (999), so `_owned_session` must reject the callback with an alert and
-    `start_quiz` must never reach `run_group_quiz`/`asyncio.create_task`.
+    `start_quiz` must never edit the message into the ready-check.
     """
     session = MagicMock()
     session.started_by_telegram_id = 111
+    session.id = 43
     mock_get_session.return_value = session
+    group_quiz._ready.pop(43, None)
 
     callback = AsyncMock()
     callback.from_user.id = 999
     callback.message.chat.id = -100
-    callback.message.delete = AsyncMock()
     callback.answer = AsyncMock()
 
     await group_quiz.start_quiz(callback)
 
-    mock_run.assert_not_called()
-    callback.message.delete.assert_not_awaited()
+    callback.message.edit_text.assert_not_awaited()
+    assert 43 not in group_quiz._ready
     callback.answer.assert_awaited_with(group_quiz._NOT_OWNER, show_alert=True)
 
 
-@patch("bot.handlers.group_quiz.asyncio.create_task")
-@patch("bot.handlers.group_quiz.run_group_quiz", new_callable=AsyncMock)
 @patch("bot.handlers.group_quiz.get_active_session")
-async def test_start_quiz_allows_owner(mock_get_session, mock_run, mock_create_task):
-    """The admin who started the wizard (matching `started_by_telegram_id`) can launch it."""
+async def test_start_quiz_owner_opens_ready_check(mock_get_session):
+    """The admin who started the wizard opens the ready-check (no launch yet)."""
     session = MagicMock()
     session.started_by_telegram_id = 111
     session.id = 42
@@ -126,18 +124,106 @@ async def test_start_quiz_allows_owner(mock_get_session, mock_run, mock_create_t
     callback = AsyncMock()
     callback.from_user.id = 111
     callback.message.chat.id = -100
-    callback.message.delete = AsyncMock()
     callback.answer = AsyncMock()
 
-    await group_quiz.start_quiz(callback)
+    try:
+        await group_quiz.start_quiz(callback)
+        assert group_quiz._ready[42] == {}
+        callback.message.edit_text.assert_awaited_once()
+    finally:
+        group_quiz._ready.pop(42, None)
 
-    mock_run.assert_called_once_with(callback.bot, 42)
-    callback.message.delete.assert_awaited_once()
+
+@patch("bot.handlers.group_quiz.get_active_session")
+async def test_toggle_ready_adds_then_removes(mock_get_session):
+    """Tapping «Men tayyorman» adds the user, tapping again removes them."""
+    session = MagicMock()
+    session.id = 7
+    mock_get_session.return_value = session
+    group_quiz._ready.pop(7, None)
+
+    callback = AsyncMock()
+    callback.from_user.id = 5
+    callback.from_user.full_name = "Ali"
+    callback.message.chat.id = -100
+    callback.answer = AsyncMock()
+
+    try:
+        await group_quiz.toggle_ready(callback)
+        assert group_quiz._ready[7] == {5: "Ali"}
+        await group_quiz.toggle_ready(callback)
+        assert group_quiz._ready[7] == {}
+    finally:
+        group_quiz._ready.pop(7, None)
+
+
+@patch("bot.handlers.group_quiz.asyncio.create_task")
+@patch("bot.handlers.group_quiz.get_active_session")
+async def test_go_quiz_blocks_when_no_one_ready(mock_get_session, mock_create_task):
+    """Owner can't launch with an empty ready set — gets an alert, nothing runs."""
+    session = MagicMock()
+    session.started_by_telegram_id = 111
+    session.id = 8
+    mock_get_session.return_value = session
+    group_quiz._ready[8] = {}
+
+    callback = AsyncMock()
+    callback.from_user.id = 111
+    callback.message.chat.id = -100
+    callback.answer = AsyncMock()
+
+    try:
+        await group_quiz.go_quiz(callback)
+        mock_create_task.assert_not_called()
+        callback.answer.assert_awaited_with(group_quiz._NO_ONE_READY, show_alert=True)
+    finally:
+        group_quiz._ready.pop(8, None)
+
+
+@patch("bot.handlers.group_quiz.create_group_session_from_shared")
+async def test_seed_group_quiz_opens_ready_check(mock_create):
+    """`?startgroup=quiz_<id>` seeds a session and posts the ready-check."""
+    mock_create.return_value = MagicMock(id=12)
+    group_quiz._ready.pop(12, None)
+    bot = AsyncMock()
+    try:
+        await group_quiz.seed_group_quiz_from_shared(bot, -100, 555, MagicMock())
+        assert group_quiz._ready[12] == {}
+        bot.send_message.assert_awaited_once()
+        assert bot.send_message.call_args.kwargs.get("reply_markup") is not None
+    finally:
+        group_quiz._ready.pop(12, None)
+
+
+@patch("bot.handlers.group_quiz.create_group_session_from_shared", return_value=None)
+async def test_seed_group_quiz_blocks_when_active(mock_create):
+    """If a quiz is already running in the chat, the seed just says so."""
+    bot = AsyncMock()
+    await group_quiz.seed_group_quiz_from_shared(bot, -100, 555, MagicMock())
+    assert group_quiz._ALREADY in bot.send_message.call_args.args
+
+
+@patch("bot.handlers.group_quiz.asyncio.create_task")
+@patch("bot.handlers.group_quiz.get_active_session")
+async def test_go_quiz_launches_with_ready_people(mock_get_session, mock_create_task):
+    """With ≥1 ready person the owner launches: countdown task scheduled, set cleared."""
+    session = MagicMock()
+    session.started_by_telegram_id = 111
+    session.id = 9
+    mock_get_session.return_value = session
+    group_quiz._ready[9] = {5: "Ali"}
+
+    callback = AsyncMock()
+    callback.from_user.id = 111
+    callback.message.chat.id = -100
+    callback.message.message_id = 55
+    callback.answer = AsyncMock()
+
+    await group_quiz.go_quiz(callback)
+
     mock_create_task.assert_called_once()
+    assert 9 not in group_quiz._ready
 
-    # `run_group_quiz(...)` (an AsyncMock) produced a real coroutine object
-    # that was handed to the (mocked) `asyncio.create_task` without ever
-    # being awaited or scheduled; close it explicitly so Python doesn't warn
-    # "coroutine was never awaited" when it's garbage collected.
-    launched_coro = mock_create_task.call_args.args[0]
-    launched_coro.close()
+    # The scheduled coroutine was handed to the mocked create_task without
+    # being awaited; close it so Python doesn't warn on GC.
+    mock_create_task.call_args.args[0].close()

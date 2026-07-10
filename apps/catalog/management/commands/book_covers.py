@@ -30,6 +30,8 @@ class Command(BaseCommand):
                 pix.save(out)
                 book.cover.name = f"images/books/covers/{book.slug}.jpg"
                 book.save(update_fields=["cover", "updated_at"])
-                self.stdout.write(self.style.SUCCESS(f"book {book.number}: cover -> {book.cover.name}"))
+                self.stdout.write(
+                    self.style.SUCCESS(f"book {book.number}: cover -> {book.cover.name}")
+                )
             except Exception as exc:  # noqa: BLE001 - report per-book and continue
                 self.stderr.write(self.style.ERROR(f"book {book.number}: {exc}"))

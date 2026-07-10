@@ -33,7 +33,13 @@ def run_webhook() -> None:
     dp = build_dispatcher()
 
     async def on_startup(_: web.Application) -> None:
-        await bot.set_webhook(cfg["url"], secret_token=cfg["secret"])
+        # Without allowed_updates, Telegram's webhook default omits poll_answer
+        # and inline_query — quiz scoring and inline share would silently break.
+        await bot.set_webhook(
+            cfg["url"],
+            secret_token=cfg["secret"],
+            allowed_updates=dp.resolve_used_update_types(),
+        )
 
     app = web.Application()
     app.on_startup.append(on_startup)

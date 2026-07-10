@@ -53,3 +53,11 @@ def start_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="🚀 Boshlash", callback_data="gq:start")
     ]])
+
+
+def ready_keyboard(count: int) -> InlineKeyboardMarkup:
+    ready_label = "✅ Men tayyorman" + (f" ({count})" if count else "")
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=ready_label, callback_data="gq:ready")],
+        [InlineKeyboardButton(text="🚀 Boshlash", callback_data="gq:go")],
+    ])

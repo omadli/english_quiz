@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 async def run_group_quiz(bot: Bot, session_id: int) -> None:
     """Sequentially send quiz polls for a group session, then post the leaderboard."""
+    if await sync_to_async(is_aborted)(session_id):
+        return  # /stop landed during the ready-check countdown — don't launch
     await sync_to_async(prepare_questions)(session_id)
     questions = await sync_to_async(pending_questions)(session_id)
 

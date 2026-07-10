@@ -50,9 +50,9 @@ def quiz_types_keyboard(selected: set) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def quiz_summary_keyboard(group_url: str | None) -> InlineKeyboardMarkup:
+def quiz_summary_keyboard(has_group: bool) -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(text=strings.BTN_START_HERE, callback_data="pq:start")]]
-    if group_url:
-        rows.append([InlineKeyboardButton(text=strings.BTN_START_GROUP, url=group_url)])
+    if has_group:  # needs BOT_USERNAME to build the startgroup deep link
+        rows.append([InlineKeyboardButton(text=strings.BTN_START_GROUP, callback_data="pq:group")])
     rows.append([InlineKeyboardButton(text=strings.BTN_SHARE, callback_data="pq:share")])
     return InlineKeyboardMarkup(inline_keyboard=rows)

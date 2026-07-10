@@ -1,5 +1,8 @@
+import html
+
 from django.utils import timezone
 
+from apps.common.emoji import custom_emoji
 from apps.quiz.models import GroupQuizParticipant, GroupQuizQuestion
 
 _MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
@@ -34,10 +37,12 @@ def build_leaderboard(session) -> str:
     if not participants:
         return "🏁 Test yakunlandi! Hech kim ishtirok etmadi."
 
-    lines = ["🏁 <b>Test yakunlandi!</b>", ""]
+    lines = [f"{custom_emoji('finish', '🏁')} <b>Test yakunlandi!</b>", ""]
     for rank, p in enumerate(participants[:50], start=1):
         label = _MEDALS.get(rank, f"{rank}.")
-        name = f"@{p.username}" if p.username else p.full_name or str(p.telegram_id)
+        # Names are sent with parse_mode=HTML → escape user-controlled full_name
+        # so a "<", ">" or "&" in it can't break the whole leaderboard send.
+        name = f"@{p.username}" if p.username else html.escape(p.full_name) or str(p.telegram_id)
         lines.append(f"{label} {name} — <b>{p.correct_count}</b> ({p.total_time:.1f}s)")
-    lines.append("\n🏆 G'oliblarni tabriklaymiz!")
+    lines.append(f"\n{custom_emoji('trophy', '🏆')} G'oliblarni tabriklaymiz!")
     return "\n".join(lines)

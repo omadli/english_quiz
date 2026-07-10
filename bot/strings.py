@@ -143,4 +143,22 @@ BTN_START_HERE = "▶️ Bu testni boshlash"
 BTN_START_GROUP = "👥 Guruhda testni boshlash"
 BTN_SHARE = "🔗 Testni ulashish"
 QUIZ_READY_PROMPT = "Tayyormisiz? 🎯"
-SHARE_TEXT = "🧠 Men bu testni sizga ulashdim! Botga o'ting va mashq qiling 👇"
+SHARE_TEXT = "🧠 Men bu testni sizga ulashdim! «▶️ Testni boshlash» bosing 👇"
+BTN_START_SHARED = "▶️ Testni boshlash"
+SHARE_INLINE_HINT = (
+    "💡 Istalgan chatda <code>@{username}</code> deb yozib, shu testni ulashishingiz mumkin."
+)
+SHARE_NO_USERNAME = "⚠️ Ulashish sozlanmagan (BOT_USERNAME yo'q). Admin bilan bog'laning."
+BTN_PICK_GROUP = "👥 Guruhni tanlang"
+GROUP_PICK_HINT = (
+    "👥 Botni qo'shmoqchi bo'lgan guruhni tanlang — test o'sha guruhda "
+    "shu sozlamalar bilan ochiladi 👇"
+)
+INLINE_NONE_TITLE = "Hali ulashilgan test yo'q"
+INLINE_NONE_DESC = "Avval 🧠 Test/Quiz orqali test tuzing va «🔗 Testni ulashish» bosing."
+INLINE_NONE_MSG = "Menda hali ulashish uchun test yo'q 🤷"
+
+# Word-list audio (gTTS)
+BTN_AUDIO = "🔊 Audio"
+AUDIO_PREPARING = "🎧 Audio tayyorlanmoqda..."
+AUDIO_FAILED = "😔 Audio hozircha tayyorlab bo'lmadi. Keyinroq urinib ko'ring."
