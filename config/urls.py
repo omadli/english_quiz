@@ -13,6 +13,8 @@ urlpatterns = [
     path("webapp/api/units/<int:book_id>/", catalog_views.api_units, name="webapp_units"),
     path("webapp/api/words/<int:unit_id>/", catalog_views.api_words, name="webapp_words"),
     path("webapp/api/search/", catalog_views.api_search, name="webapp_search"),
+    path("webapp/api/profile/", catalog_views.api_profile, name="webapp_profile"),
+    path("webapp/api/learned/", catalog_views.api_learned, name="webapp_learned"),
 ]
 
 if settings.DEBUG:

@@ -127,6 +127,28 @@ class WordProgress(TimeStampedModel):
         return f"WordProgress(user={self.user_id}, word={self.word_id})"
 
 
+class LearnedWord(TimeStampedModel):
+    """A word the user manually marked 'learned' in the Mini App word browser.
+
+    Deliberately decoupled from the SRS ``WordProgress`` so a manual toggle
+    can't perturb daily-exam scheduling — it's just a personal 'I know this'
+    bookmark that drives the Mini App's progress count.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="learned_words"
+    )
+    word = models.ForeignKey("catalog.Word", on_delete=models.CASCADE, related_name="+")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "word"], name="uniq_user_learned_word")
+        ]
+
+    def __str__(self) -> str:
+        return f"LearnedWord(user={self.user_id}, word={self.word_id})"
+
+
 class ExamQuestion(TimeStampedModel):
     class QType(models.TextChoices):
         EN_UZ = "en_uz", "EN→UZ"

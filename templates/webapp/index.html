@@ -44,6 +44,7 @@
   <script>
     const tg = window.Telegram ? window.Telegram.WebApp : null;
     if (tg) { tg.ready(); tg.expand(); }
+    const initData = tg && tg.initData ? tg.initData : "";
 
     const titleEl = document.getElementById("title");
     const subtitleEl = document.getElementById("subtitle");
@@ -96,11 +97,27 @@
     function loading() { setContent("px-4 py-16 text-center text-sm text-muted", "Yuklanmoqda…"); }
     function message(t) { setContent("px-4 py-16 text-center text-sm text-muted", esc(t)); }
 
-    // ---- learned state (Telegram CloudStorage; localStorage fallback) ------
+    // ---- learned state (server when authed; CloudStorage/localStorage else) -
     const SHARDS = 8;
     let learned = new Set();
+
+    async function apiLearned(method, body) {
+      const res = await fetch("/webapp/api/learned/", {
+        method,
+        headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": initData },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) throw new Error(res.status);
+      return res.json();
+    }
+
     function loadLearned(done) {
-      if (tg && tg.CloudStorage) {
+      if (initData) {
+        apiLearned("GET")
+          .then((d) => { learned = new Set((d.ids || []).map(String)); })
+          .catch(() => { learned = new Set(); })
+          .finally(() => done && done());
+      } else if (tg && tg.CloudStorage) {
         const keys = Array.from({ length: SHARDS }, (_, i) => "learned_" + i);
         tg.CloudStorage.getItems(keys, (e, items) => {
           learned = new Set();
@@ -115,13 +132,16 @@
     function toggleLearned(id) {
       id = String(id);
       learned.has(id) ? learned.delete(id) : learned.add(id);
-      if (tg && tg.CloudStorage) {
+      const on = learned.has(id);
+      if (initData) {
+        apiLearned("POST", { word_id: Number(id), learned: on }).catch(() => {});
+      } else if (tg && tg.CloudStorage) {
         const shard = Number(id) % SHARDS;
         tg.CloudStorage.setItem("learned_" + shard, [...learned].filter((x) => Number(x) % SHARDS === shard).join(","));
       } else {
         localStorage.setItem("learned", [...learned].join(","));
       }
-      return learned.has(id);
+      return on;
     }
 
     const speakerSvg = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a9 9 0 0 1 0 12" stroke-linecap="round"/></svg>';
@@ -221,14 +241,111 @@
       const back = () => showGamePick(book, unit);
       setContent("px-4 py-6 pb-24 space-y-3",
         `<button id="g-quiz" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-4 active:scale-[.99] transition">🧩 Test — variantli savol</button>
+         <button id="g-speed" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">⚡ Tezlik — 30 soniyada</button>
+         <button id="g-memory" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🧠 Xotira — juftlarni oching</button>
          <button id="g-match" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🎮 Juftlash — en ↔ uz</button>
          <button id="g-spell" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">✍️ Yozish — so'zni ter</button>`);
       document.getElementById("g-quiz").addEventListener("click", () => startQuiz(words, back));
+      document.getElementById("g-speed").addEventListener("click", () => startSpeed(words, back));
+      document.getElementById("g-memory").addEventListener("click", () => startMemory(words, back));
       document.getElementById("g-match").addEventListener("click", () => startMatch(words, back));
       document.getElementById("g-spell").addEventListener("click", () => startSpell(words, back));
     }
 
     // ---- PROFIL tab --------------------------------------------------------
+    // ---- settings (Telegram initData-authenticated) ------------------------
+    const WD = ["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"];
+    const chipCls = (on) => "rounded-full px-3 py-2 text-xs " +
+      (on ? "bg-accent text-white" : "bg-card border border-line text-muted");
+
+    async function apiProfile(method, body) {
+      const res = await fetch("/webapp/api/profile/", {
+        method,
+        headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": initData },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) throw new Error(res.status);
+      return res.json();
+    }
+
+    function settingsHTML(s) {
+      const days = WD.map((d, i) =>
+        `<button data-day="${i}" class="js-day ${chipCls(s.study_weekdays.includes(i))}">${d}</button>`).join("");
+      const opt = (v, sel) => `<option value="${v}" ${v === sel ? "selected" : ""}>${v}</option>`;
+      const select = (id, vals, cur) =>
+        `<select id="${id}" class="bg-card border border-line rounded-xl px-3 py-2 text-sm">${vals.map((v) => opt(v, cur)).join("")}</select>`;
+      const time = (id, val) =>
+        `<input id="${id}" type="time" value="${val}" class="bg-card border border-line rounded-xl px-3 py-2 text-sm">`;
+      const toggle = (id, on) =>
+        `<button id="${id}" data-on="${on ? 1 : 0}" class="js-toggle ${chipCls(on)}">${on ? "Yoniq" : "O'chiq"}</button>`;
+      const row = (label, ctrl) =>
+        `<div class="flex items-center justify-between"><span class="text-sm">${label}</span>${ctrl}</div>`;
+      return `<div class="rounded-2xl bg-card border border-line p-5 space-y-3">
+        <div class="text-sm font-semibold">⚙️ Sozlamalar</div>
+        <div>
+          <div class="text-xs text-muted" style="margin-bottom:.5rem">O'quv kunlari</div>
+          <div class="flex gap-2" style="flex-wrap:wrap">${days}</div>
+        </div>
+        ${row("Kunlik so'z", select("js-wps", [5, 10, 15, 20], s.words_per_session))}
+        ${row("Ertalabki vaqt", time("js-morning", s.morning_time))}
+        ${row("Imtihon vaqti", time("js-exam", s.exam_time))}
+        ${row("Audio", toggle("js-audio", s.audio_enabled))}
+        ${row("Audio takror", select("js-rep", [1, 2, 3], s.audio_repeat))}
+        ${row("Bildirishnomalar", toggle("js-nudge", s.nudges_enabled))}
+        <button id="js-save" class="w-full rounded-xl bg-accent text-white py-2 font-semibold">💾 Saqlash</button>
+      </div>`;
+    }
+
+    function bindSettings(s) {
+      const box = document.getElementById("settings");
+      box.querySelectorAll(".js-day").forEach((el) => el.addEventListener("click", () => {
+        const i = Number(el.dataset.day);
+        s.study_weekdays = s.study_weekdays.includes(i)
+          ? s.study_weekdays.filter((x) => x !== i) : [...s.study_weekdays, i];
+        el.className = "js-day " + chipCls(s.study_weekdays.includes(i));
+      }));
+      box.querySelectorAll(".js-toggle").forEach((el) => el.addEventListener("click", () => {
+        const on = el.dataset.on !== "1";
+        el.dataset.on = on ? "1" : "0";
+        el.textContent = on ? "Yoniq" : "O'chiq";
+        el.className = "js-toggle " + chipCls(on);
+      }));
+      document.getElementById("js-save").addEventListener("click", async () => {
+        const btn = document.getElementById("js-save");
+        btn.textContent = "Saqlanmoqda…"; btn.disabled = true;
+        try {
+          await apiProfile("POST", {
+            study_weekdays: s.study_weekdays,
+            words_per_session: Number(document.getElementById("js-wps").value),
+            morning_time: document.getElementById("js-morning").value,
+            exam_time: document.getElementById("js-exam").value,
+            audio_enabled: document.getElementById("js-audio").dataset.on === "1",
+            audio_repeat: Number(document.getElementById("js-rep").value),
+            nudges_enabled: document.getElementById("js-nudge").dataset.on === "1",
+          });
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+          btn.textContent = "✅ Saqlandi";
+        } catch (e) {
+          btn.textContent = "❌ Xato";
+        }
+        setTimeout(() => { btn.textContent = "💾 Saqlash"; btn.disabled = false; }, 1300);
+      });
+    }
+
+    async function loadSettings() {
+      const box = document.getElementById("settings");
+      if (!box) return;
+      const hint = `<p class="text-center text-xs text-muted">O'quv sozlamalari botda: <b>/settings</b> ⚙️</p>`;
+      if (!initData) { box.innerHTML = hint; return; }
+      try {
+        const s = await apiProfile("GET");
+        box.innerHTML = settingsHTML(s);
+        bindSettings(s);
+      } catch (e) {
+        box.innerHTML = hint;
+      }
+    }
+
     async function showProfile() {
       loading(); setHeader("Profil", "Sizning progressingiz"); setBack(null);
       const list = await books();
@@ -247,7 +364,8 @@
            <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${total}</div><div class="text-[11px] text-muted">so'z</div></div>
            <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${done}</div><div class="text-[11px] text-muted">o'rgandim</div></div>
          </div>
-         <p class="text-center text-xs text-muted">O'quv sozlamalari botda: <b>/settings</b> ⚙️</p>`);
+         <div id="settings"><p class="text-center text-xs text-muted">Yuklanmoqda…</p></div>`);
+      loadSettings();
     }
 
     // ---- games (client-side; reuse the selected words) ---------------------
@@ -343,6 +461,74 @@
         document.getElementById("sp-again").addEventListener("click", () => startSpell(words, back));
       }
       render();
+    }
+    // ---- speed round: answer as many as possible in 30s --------------------
+    function startSpeed(words, back) {
+      const pool = words.filter((w) => w.uz);
+      if (pool.length < 4) return message("O'yin uchun so'z yetarli emas.");
+      let score = 0, left = 30, alive = true, queue = [];
+      const stop = () => { alive = false; clearInterval(timer); };
+      const timer = setInterval(() => {
+        if (!alive) return;
+        if (--left <= 0) { stop(); return finish(); }
+        setHeader(`⏱ ${left}s`, `Ball: ${score}`);
+      }, 1000);
+      setBack(() => { stop(); back(); });
+      const nextWord = () => { if (!queue.length) queue = shuffle(pool.slice()); return queue.pop(); };
+      function render() {
+        if (!alive) return;
+        const w = nextWord();
+        const opts = shuffle([w.uz, ...shuffle(pool.filter((x) => x.uz !== w.uz)).slice(0, 3).map((x) => x.uz)]);
+        setHeader(`⏱ ${left}s`, `Ball: ${score}`);
+        setContent("px-4 py-6 pb-24 space-y-3",
+          `<div class="text-center mb-3"><div class="text-2xl font-bold tracking-tight">${esc(w.en)}</div><div class="text-xs text-muted">${esc(w.part_of_speech || "")}</div></div>` +
+          opts.map((o) => `<button class="js-sopt w-full rounded-2xl bg-card border border-line p-3.5 text-left text-[15px]" data-uz="${esc(o)}">${esc(o)}</button>`).join(""));
+        contentEl.querySelectorAll(".js-sopt").forEach((el) => el.addEventListener("click", () => {
+          if (!alive) return;
+          const ok = el.dataset.uz === w.uz;
+          if (ok) score++; else left = Math.max(1, left - 2); // wrong answer costs 2s
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(ok ? "success" : "error");
+          render();
+        }));
+      }
+      function finish() {
+        setHeader("Natija", "Vaqt tugadi");
+        setContent("px-4 py-16 pb-24 text-center space-y-4",
+          `<div class="text-5xl font-bold tracking-tight">${score}</div><div class="text-sm text-muted">to'g'ri javob</div>
+           <button id="spd-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
+        document.getElementById("spd-again").addEventListener("click", () => startSpeed(words, back));
+      }
+      render();
+    }
+    // ---- memory: flip cards, find the en↔uz pairs --------------------------
+    function startMemory(words, back) {
+      const pairs = shuffle(words.filter((w) => w.uz && w.en)).slice(0, 6);
+      if (pairs.length < 4) return message("O'yin uchun so'z yetarli emas.");
+      setBack(back); setHeader("Xotira", "Juftlarni oching");
+      const cards = shuffle(pairs.flatMap((w, pid) => [{ pid, text: w.en }, { pid, text: w.uz }]));
+      let first = null, lock = false, matched = 0;
+      setContent("px-4 py-4 pb-24",
+        `<div class="grid grid-cols-3 gap-2">${cards.map((c, idx) =>
+          `<button data-idx="${idx}" data-pid="${c.pid}" data-text="${esc(c.text)}" class="js-card aspect-square grid place-items-center rounded-xl bg-card border border-line text-sm font-semibold px-1 text-center">?</button>`).join("")}</div>
+         <p id="mem-msg" class="text-center text-sm text-muted mt-4"></p>`);
+      const show = (el) => { el.textContent = el.dataset.text; el.classList.add("ring-2", "ring-accent"); };
+      const hide = (el) => { el.textContent = "?"; el.classList.remove("ring-2", "ring-accent"); };
+      contentEl.querySelectorAll(".js-card").forEach((el) => el.addEventListener("click", () => {
+        if (lock || el.disabled || el === first) return;
+        show(el);
+        if (!first) { first = el; return; }
+        if (first.dataset.pid === el.dataset.pid) {
+          [first, el].forEach((b) => { b.disabled = true; b.classList.remove("ring-2", "ring-accent"); b.classList.add("bg-emerald-500/20", "border-emerald-400/40"); });
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+          first = null;
+          if (++matched === pairs.length) document.getElementById("mem-msg").textContent = "✅ Yakunlandi! 🎉";
+        } else {
+          lock = true;
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
+          const pair = [first, el];
+          setTimeout(() => { pair.forEach(hide); first = null; lock = false; }, 700);
+        }
+      }));
     }
 
     // ---- search (Kitoblar tab) --------------------------------------------
