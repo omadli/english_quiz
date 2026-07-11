@@ -7,6 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
+from apps.catalog.models import Unit
 from apps.quiz.models import GroupQuizSession
 from apps.quiz.services.session import (
     abort_active,
@@ -19,6 +20,7 @@ from apps.quiz.services.session import (
     toggle_type,
     toggle_unit,
 )
+from bot import strings
 from bot.keyboards.group_quiz import (
     books_keyboard,
     count_keyboard,
@@ -47,8 +49,26 @@ _NO_ONE_READY = "Hali hech kim tayyor emas 🤷"
 _ready: dict[int, dict[int, str]] = {}  # session_id -> {user_id: display_name}
 
 
-def _ready_text(names: list[str]) -> str:
-    text = _READY_CHECK
+def _config_text(session: GroupQuizSession) -> str:
+    """Config summary shown in the ready-check: book · units · count · time · types."""
+    book = session.book.title if session.book_id else "—"
+    numbers = list(
+        Unit.objects.filter(pk__in=session.unit_ids)
+        .order_by("number")
+        .values_list("number", flat=True)
+    )
+    types = ", ".join(strings.QUIZ_TYPE_LABELS.get(t, t) for t in session.question_types)
+    return (
+        f"📚 <b>{html.escape(book)}</b>\n"
+        f"🗂 Bo'limlar: <b>{', '.join(map(str, numbers)) or '—'}</b>\n"
+        f"✏️ <b>{session.question_count} ta savol</b> · "
+        f"⏱ <b>{session.interval_seconds} soniya</b>\n"
+        f"🎲 <b>{types or '—'}</b>"
+    )
+
+
+def _ready_text(config: str, names: list[str]) -> str:
+    text = f"{_READY_CHECK}\n\n{config}"
     if names:
         joined = ", ".join(html.escape(n) for n in names)
         text += _READY_LIST.format(n=len(names), names=joined)
@@ -62,7 +82,8 @@ async def seed_group_quiz_from_config(bot: Bot, chat_id: int, user_id: int, conf
         await bot.send_message(chat_id, _ALREADY)
         return
     _ready[session.id] = {}
-    await bot.send_message(chat_id, _ready_text([]), reply_markup=ready_keyboard(0))
+    config = await sync_to_async(_config_text)(session)
+    await bot.send_message(chat_id, _ready_text(config, []), reply_markup=ready_keyboard(0))
 
 
 async def is_chat_admin(bot: Bot, chat_id: int, user_id: int) -> bool:
@@ -200,8 +221,9 @@ async def start_quiz(callback: CallbackQuery) -> None:
     if session is None:
         return
     _ready[session.id] = {}
+    config = await sync_to_async(_config_text)(session)
     await callback.message.edit_text(
-        _ready_text([]), reply_markup=ready_keyboard(0), parse_mode=ParseMode.HTML
+        _ready_text(config, []), reply_markup=ready_keyboard(0), parse_mode=ParseMode.HTML
     )
 
 
@@ -220,9 +242,10 @@ async def toggle_ready(callback: CallbackQuery) -> None:
         readies[callback.from_user.id] = callback.from_user.full_name
         await callback.answer("Tayyor! ✅")
     names = list(readies.values())
+    config = await sync_to_async(_config_text)(session)
     try:
         await callback.message.edit_text(
-            _ready_text(names), reply_markup=ready_keyboard(len(names)),
+            _ready_text(config, names), reply_markup=ready_keyboard(len(names)),
             parse_mode=ParseMode.HTML,
         )
     except Exception:  # "message is not modified" / message gone

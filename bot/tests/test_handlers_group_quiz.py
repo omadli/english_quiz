@@ -204,6 +204,32 @@ async def test_seed_group_quiz_blocks_when_active(mock_create):
     assert group_quiz._ALREADY in bot.send_message.call_args.args
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.asyncio
+async def test_config_text_summarizes_book_units_count_time():
+    """The ready-check config line shows book, unit numbers, count and interval."""
+    from apps.quiz.models import GroupQuizSession
+
+    def _setup() -> GroupQuizSession:
+        book = Book.objects.create(number=1, title="B1", slug="b1-cfg")
+        u1 = Unit.objects.create(book=book, number=1)
+        u2 = Unit.objects.create(book=book, number=3)
+        return GroupQuizSession.objects.create(
+            chat_id=-100778, book=book, unit_ids=[u1.id, u2.id],
+            question_count=15, interval_seconds=25, question_types=["en_uz"],
+        )
+
+    try:
+        session = await sync_to_async(_setup)()
+        text = await sync_to_async(group_quiz._config_text)(session)
+        assert "B1" in text
+        assert "1, 3" in text            # unit numbers
+        assert "15 ta savol" in text
+        assert "25 soniya" in text
+    finally:
+        await sync_to_async(connections.close_all)()
+
+
 @patch("bot.handlers.group_quiz.asyncio.create_task")
 @patch("bot.handlers.group_quiz.get_active_session")
 async def test_go_quiz_launches_with_ready_people(mock_get_session, mock_create_task):
