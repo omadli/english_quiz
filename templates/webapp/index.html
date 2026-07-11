@@ -305,13 +305,15 @@
          <button id="g-memory" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🧠 Xotira — juftlarni oching</button>
          <button id="g-match" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🎮 Juftlash — en ↔ uz</button>
          <button id="g-spell" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">✍️ Yozish — so'zni ter</button>
-         <button id="g-speech" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🎤 Talaffuz — ovoz bilan ayting</button>`);
+         <button id="g-speech" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🎤 Talaffuz — ovoz bilan ayting</button>
+         <button id="g-shadow" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🗣 Shadowing — eshit va takrorla</button>`);
       document.getElementById("g-quiz").addEventListener("click", () => startQuiz(words, back));
       document.getElementById("g-speed").addEventListener("click", () => startSpeed(words, back));
       document.getElementById("g-memory").addEventListener("click", () => startMemory(words, back));
       document.getElementById("g-match").addEventListener("click", () => startMatch(words, back));
       document.getElementById("g-spell").addEventListener("click", () => startSpell(words, back));
       document.getElementById("g-speech").addEventListener("click", () => startSpeech(words, back));
+      document.getElementById("g-shadow").addEventListener("click", () => startShadow(words, back));
     }
     async function showGamePick(book, unit) {
       loading(); setHeader(`Unit ${unit.number}`, "O'yinni tanlang"); setBack(() => showGameUnits(book));
@@ -688,6 +690,78 @@
           `<div class="text-5xl font-bold tracking-tight a-pop">${score}/${qs.length}</div>
            <button id="spk-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
         document.getElementById("spk-again").addEventListener("click", () => startSpeech(words, back));
+      }
+      render();
+    }
+    // ---- shadowing: hear the example sentence, then repeat (shadow) it ------
+    function startShadow(words, back) {
+      setBack(back);
+      if (!SpeechRec) {
+        return message("😔 Bu qurilma ovozli tanishni qo'llab-quvvatlamaydi. Chrome brauzerida oching.");
+      }
+      const pool = words.filter((w) => w.example);
+      if (!pool.length) return message("Bu bo'limda takrorlash uchun misol yo'q.");
+      const qs = shuffle(pool).slice(0, 8);
+      let i = 0, score = 0;
+      const wordsOf = (s) => (s || "").toLowerCase().replace(/<[^>]+>/g, "").replace(/[^a-z\s]/g, "").split(/\s+/).filter(Boolean);
+      function render() {
+        if (i >= qs.length) return done();
+        const sentence = qs[i].example.replace(/<[^>]+>/g, "").trim();
+        setHeader(`Shadowing ${i + 1}/${qs.length}`, `Ball: ${score}`);
+        setContent("px-4 py-6 pb-24 text-center space-y-3",
+          `<div class="rounded-2xl bg-card border border-line p-4 text-[15px] leading-relaxed">${esc(sentence)}</div>
+           <button id="sh-hear" class="rounded-full bg-card border border-line px-4 py-2 text-sm text-accent active:scale-95 transition">🔊 Eshitish</button>
+           <div class="pt-3">
+             <button id="sh-mic" class="mx-auto grid h-24 w-24 place-items-center rounded-full bg-accent text-accent-ink text-4xl active:scale-95 transition">🎤</button>
+             <div class="text-xs text-muted mt-3">Eshiting, keyin bosib takrorlang</div>
+           </div>
+           <p id="sh-res" class="text-sm min-h-[1.5em]"></p>`);
+        speak(sentence);  // auto-play the model once
+        document.getElementById("sh-hear").addEventListener("click", () => speak(sentence));
+        const mic = document.getElementById("sh-mic"), res = document.getElementById("sh-res");
+        const target = wordsOf(sentence);
+        let busy = false;
+        mic.addEventListener("click", () => {
+          if (busy) return;
+          busy = true;
+          const rec = new SpeechRec();
+          rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
+          mic.classList.add("a-listen"); res.textContent = "🎙 Tinglanmoqda…"; res.className = "text-sm text-muted min-h-[1.5em]";
+          rec.onresult = (e) => {
+            const heard = wordsOf(e.results[0][0].transcript);
+            const matched = target.filter((t) => heard.includes(t)).length;
+            const ratio = target.length ? matched / target.length : 0;
+            const ok = ratio >= 0.6;
+            mic.classList.remove("a-listen");
+            if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(ok ? "success" : "error");
+            const pct = Math.round(ratio * 100);
+            if (ok) {
+              score++;
+              res.innerHTML = `<span class="text-emerald-400">✅ Zo'r! ${matched}/${target.length} so'z (${pct}%)</span>`;
+              mic.classList.add("a-correct");
+              setTimeout(() => { i++; render(); }, 1200);
+            } else {
+              res.innerHTML = `<span class="text-rose-400">${matched}/${target.length} so'z (${pct}%)</span> — yana urining`;
+              mic.classList.add("a-shake");
+              setTimeout(() => mic.classList.remove("a-shake"), 500);
+              busy = false;
+            }
+          };
+          rec.onerror = (e) => {
+            mic.classList.remove("a-listen");
+            const msg = e.error === "not-allowed" ? "Mikrofonga ruxsat bering" : "Ovoz eshitilmadi";
+            res.innerHTML = `<span class="text-rose-400">${msg} — qayta urining</span>`;
+            busy = false;
+          };
+          try { rec.start(); } catch (err) { mic.classList.remove("a-listen"); busy = false; }
+        });
+      }
+      function done() {
+        setHeader("Natija", "Shadowing tugadi");
+        setContent("px-4 py-16 pb-24 text-center space-y-4",
+          `<div class="text-5xl font-bold tracking-tight a-pop">${score}/${qs.length}</div>
+           <button id="sh-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
+        document.getElementById("sh-again").addEventListener("click", () => startShadow(words, back));
       }
       render();
     }
