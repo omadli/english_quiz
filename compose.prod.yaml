@@ -35,3 +35,8 @@ services:
     restart: unless-stopped
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
+    # Webhook mode (BOT_MODE=webhook in .env): expose the aiohttp listener on
+    # localhost so nginx can proxy https://english.omadli.uz/tg/ -> the bot.
+    # Host port must match WEBHOOK_PORT in .env.
+    ports:
+      - "127.0.0.1:8090:8090"
