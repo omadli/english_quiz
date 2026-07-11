@@ -7,6 +7,7 @@ from bot.config import get_bot_token, get_fsm_redis_url
 from bot.handlers import (
     books,
     common,
+    daily,
     group_quiz,
     leaderboard,
     menu,
@@ -30,6 +31,7 @@ def build_dispatcher() -> Dispatcher:
     dp.message.middleware(UserMiddleware())
     dp.callback_query.middleware(UserMiddleware())
     dp.include_router(start.router)
+    dp.include_router(daily.router)
     dp.include_router(onboarding.router)
     dp.include_router(settings.router)
     dp.include_router(common.router)

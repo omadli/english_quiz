@@ -24,6 +24,7 @@ def _detach_handler_routers():
     from bot.handlers import (
         books,
         common,
+        daily,
         group_quiz,
         leaderboard,
         menu,
@@ -39,6 +40,7 @@ def _detach_handler_routers():
     for module in (
         books,
         common,
+        daily,
         group_quiz,
         leaderboard,
         menu,

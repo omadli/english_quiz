@@ -91,6 +91,10 @@ MENU_GROUP_QUIZ = "👥 Guruh quizi"
 MENU_TOP = "🏆 Reyting"
 MENU_SETTINGS = "⚙️ Sozlamalar"
 MENU_WEBAPP = "🌐 Mini App"
+MENU_TODAY = "📅 Bugungi vazifa"
+MENU_EXAM = "🎯 Imtihon"
+TODAY_NONE = "📅 Bugungi vazifa hali yo'q — ertalab belgilangan vaqtda keladi 🌅"
+TODAY_PREPARING = "⏳ Bugungi vazifa tayyorlanmoqda..."
 MENU_OPENED = "🏠 <b>Asosiy menyu</b> 👇"
 
 GROUP_QUIZ_INFO = (
