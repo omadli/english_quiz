@@ -19,8 +19,13 @@
     .a-shake { animation: a-shake .4s both }
     .a-flip { animation: a-flip .28s ease-out both }
     .a-correct { animation: a-pop .3s both, a-pulse .55s ease-out }
+    @keyframes a-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes a-ring { 0%,100%{box-shadow:0 0 0 0 rgba(129,140,248,.5)} 50%{box-shadow:0 0 0 12px rgba(129,140,248,0)} }
+    .node-face { transition: transform .12s ease }
+    .node-wrap:active .node-face { transform: scale(.9) }
+    .node-cur .node-face { animation: a-bob 1.5s ease-in-out infinite, a-ring 2s ease-in-out infinite }
     @media (prefers-reduced-motion: reduce) {
-      .a-fadeup,.a-pop,.a-shake,.a-flip,.a-correct { animation: none !important }
+      .a-fadeup,.a-pop,.a-shake,.a-flip,.a-correct,.node-cur .node-face { animation: none !important }
     }
   </style>
 </head>
@@ -85,7 +90,8 @@
     const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((x) => x[1]);
 
     async function getJSON(url) {
-      const res = await fetch(url);
+      // Carry initData so authed endpoints (e.g. units → learned counts) can identify the user.
+      const res = await fetch(url, initData ? { headers: { "X-Telegram-Init-Data": initData } } : {});
       if (!res.ok) throw new Error(res.status);
       return res.json();
     }
@@ -199,13 +205,53 @@
       contentEl.querySelectorAll(".js-book").forEach((el) => el.addEventListener("click", () =>
         showUnits({ id: el.dataset.id, number: el.dataset.num, title: el.dataset.title, pdf: el.dataset.pdf })));
     }
+    // ---- learning adventure: a winding trail of unit "stones" (Duolingo-style) --
+    function unitNode(p, u, state, frac) {
+      const faceCls = {
+        done: "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg",
+        cur: "bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg",
+        progress: "bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg",
+        todo: "bg-card border-2 border-line text-muted",
+      }[state];
+      const inner = state === "done" ? '<span class="text-2xl">⭐</span>'
+        : `<span class="text-lg font-black">${u.number}</span>`;
+      const C = (2 * Math.PI * 20).toFixed(1);
+      const ring = (frac > 0 && frac < 1)
+        ? `<svg class="absolute" style="inset:-5px;width:calc(100% + 10px);height:calc(100% + 10px)" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="rgba(148,163,184,.25)" stroke-width="4"/><circle cx="25" cy="25" r="20" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 25 25)"/></svg>`
+        : "";
+      return `<button data-id="${u.id}" data-n="${u.number}" class="js-node node-wrap absolute flex flex-col items-center gap-1 ${state === "cur" ? "node-cur" : ""}" style="left:${p.x.toFixed(1)}px;top:${p.y}px;transform:translate(-50%,-50%)">
+        <span class="node-face relative grid h-16 w-16 place-items-center rounded-full ${faceCls} a-pop" style="animation-delay:${Math.min(p.i, 12) * 55}ms">${ring}${inner}</span>
+        <span class="text-[10px] font-semibold ${state === "todo" ? "text-muted" : "text-ink"} whitespace-nowrap">Unit ${u.number}</span>
+      </button>`;
+    }
     async function showUnits(book) {
-      loading(); setHeader(book.title, "Bo'limni tanlang"); setBack(showBooks);
+      loading(); setHeader(book.title, "O'quv sayohati"); setBack(showBooks);
       const { units } = await getJSON(`api/units/${book.id}/`);
-      const pdfBtn = book.pdf ? `<a href="${book.pdf}" target="_blank" rel="noopener" class="col-span-6 rounded-2xl bg-card border border-line py-2.5 text-center text-sm font-semibold text-accent">📥 PDF yuklab olish</a>` : "";
-      const chips = units.map((u) => `<button data-id="${u.id}" data-n="${u.number}" class="js-unit aspect-square grid place-items-center rounded-xl bg-card border border-line text-sm font-semibold active:scale-90 transition">${u.number}</button>`).join("");
-      setContent("px-4 py-4 pb-24 grid grid-cols-6 gap-2", chips + pdfBtn);
-      contentEl.querySelectorAll(".js-unit").forEach((el) => el.addEventListener("click", () =>
+      const total = units.length;
+      const isDone = (u) => u.word_count > 0 && (u.learned || 0) >= u.word_count;
+      const doneCount = units.filter(isDone).length;
+      let frontier = units.findIndex((u) => !isDone(u));  // first not-yet-completed
+      if (frontier < 0) frontier = -1;                    // all done
+      const pdf = book.pdf ? `<a href="${book.pdf}" target="_blank" rel="noopener" class="shrink-0 rounded-full bg-card border border-line px-3 py-1.5 text-xs font-semibold text-accent active:scale-95 transition">📥 PDF</a>` : "";
+      const STEP = 92, TOP = 54, H = TOP + (total - 1) * STEP + 96;
+      setContent("px-4 py-3 pb-24",
+        `<div class="flex items-center justify-between mb-2">
+           <div class="text-[13px] text-muted"><b class="text-ink">${doneCount}</b>/${total} bo'lim tugallandi 🎯</div>${pdf}
+         </div>
+         <div id="adv" class="relative mx-auto" style="height:${H}px;max-width:360px"></div>`);
+      const box = document.getElementById("adv");
+      const W = box.clientWidth || 340, cx = W / 2, amp = Math.min(W * 0.34, 118);
+      const pts = units.map((u, i) => ({ u, i, x: cx + Math.sin(i * 0.8) * amp, y: TOP + i * STEP }));
+      const d = pts.map((p, i) => `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.y}`).join(" ");
+      let html = `<svg class="absolute inset-0" width="${W}" height="${H}" style="pointer-events:none"><path d="${d}" fill="none" stroke="#2c3552" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 9"/></svg>`;
+      html += pts.map((p) => {
+        const learned = p.u.learned || 0, frac = p.u.word_count ? learned / p.u.word_count : 0;
+        const state = isDone(p.u) ? "done" : (p.i === frontier ? "cur" : (learned > 0 ? "progress" : "todo"));
+        return unitNode(p, p.u, state, frac);
+      }).join("");
+      html += `<div class="absolute -translate-x-1/2 text-center" style="left:${cx}px;top:${TOP + total * STEP}px"><div class="text-3xl">${doneCount === total ? "🏆" : "🏁"}</div></div>`;
+      box.innerHTML = html;
+      box.querySelectorAll(".js-node").forEach((el) => el.addEventListener("click", () =>
         showWords(book, { id: el.dataset.id, number: el.dataset.n })));
     }
     async function showWords(book, unit) {

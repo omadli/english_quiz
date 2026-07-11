@@ -142,6 +142,33 @@ def test_learned_get_lists_ids_and_reflects_in_profile(client, settings):
     assert prof.json()["learned_words"] == 1
 
 
+def test_api_units_includes_learned_counts_when_authed(client, settings):
+    settings.BOT_TOKEN = TOKEN
+    user = _user(555)
+    book = Book.objects.create(number=1, title="B1", slug="b1")
+    u1 = Unit.objects.create(book=book, number=1, word_count=2)
+    u2 = Unit.objects.create(book=book, number=2, word_count=2)
+    w1 = Word.objects.create(unit=u1, en="a", uz="a", order=1)
+    Word.objects.create(unit=u1, en="b", uz="b", order=2)
+    Word.objects.create(unit=u2, en="c", uz="c", order=1)
+    LearnedWord.objects.create(user=user, word=w1)  # 1 of unit 1 learned
+
+    resp = client.get(
+        f"/webapp/api/units/{book.id}/",
+        HTTP_X_TELEGRAM_INIT_DATA=_init_data({"id": 555, "first_name": "Ali"}),
+    )
+    units = {u["number"]: u for u in resp.json()["units"]}
+    assert units[1]["learned"] == 1
+    assert units[2]["learned"] == 0
+
+
+def test_api_units_no_learned_key_without_auth(client):
+    book = Book.objects.create(number=1, title="B1", slug="b1")
+    Unit.objects.create(book=book, number=1, word_count=2)
+    resp = client.get(f"/webapp/api/units/{book.id}/")
+    assert "learned" not in resp.json()["units"][0]  # anonymous → no per-user data
+
+
 def test_learned_has_no_manual_post(client, settings):
     """Manual marking was removed — POST must not create a LearnedWord."""
     settings.BOT_TOKEN = TOKEN

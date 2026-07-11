@@ -4,7 +4,7 @@ import time
 
 from aiogram.utils.web_app import safe_parse_webapp_init_data
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -53,12 +53,24 @@ def api_books(request):
 
 
 def api_units(request, book_id: int):
-    units = (
+    units = list(
         Unit.objects.filter(book_id=book_id)
         .order_by("number")
         .values("id", "number", "title", "word_count")
     )
-    return JsonResponse({"units": list(units)})
+    # When the caller is authenticated (Telegram initData), attach per-unit
+    # learned counts so the Mini App can draw the progress path.
+    profile = _profile_from_request(request)
+    if profile is not None:
+        counts = dict(
+            LearnedWord.objects.filter(user=profile.user, word__unit__book_id=book_id)
+            .values("word__unit_id")
+            .annotate(c=Count("id"))
+            .values_list("word__unit_id", "c")
+        )
+        for u in units:
+            u["learned"] = counts.get(u["id"], 0)
+    return JsonResponse({"units": units})
 
 
 def api_words(request, unit_id: int):
