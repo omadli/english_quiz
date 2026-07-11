@@ -241,7 +241,10 @@ async def inline_share(query: InlineQuery) -> None:
         results = [InlineQueryResultArticle(
             id=code,
             title=f"🧠 {card['book']}",
-            description=f"{card['count']} savol · {card['interval']}s",
+            description=(
+                f"🗂 Bo'limlar: {card['units']} · "
+                f"{card['count']} ta savol · ⏱ {card['interval']}s"
+            ),
             input_message_content=InputTextMessageContent(
                 message_text=text, parse_mode=ParseMode.HTML
             ),

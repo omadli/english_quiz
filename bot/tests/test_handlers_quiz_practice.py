@@ -100,6 +100,8 @@ async def test_inline_share_returns_card_with_action_buttons(mock_card, mock_set
     await qp.inline_share(query)
     results = query.answer.await_args.args[0]
     assert results[0].id == "b1u1-4c10t30qE"
+    assert "Book 1" in results[0].title              # book shown in the inline preview
+    assert "1–4" in results[0].description           # units shown in the inline preview
     buttons = [b for row in results[0].reply_markup.inline_keyboard for b in row]
     urls = [b.url for b in buttons if b.url]
     assert any("start=b1u1-4c10t30qE" in u for u in urls)        # personal deep link
