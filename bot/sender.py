@@ -54,6 +54,7 @@ async def _send_quiz_poll(
         correct_option_id=correct_option,
         is_anonymous=is_anonymous,
         explanation=explanation,
+        explanation_parse_mode=ParseMode.HTML,
     )
     return msg.poll.id
 

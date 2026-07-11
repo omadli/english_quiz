@@ -23,19 +23,21 @@ async def run_group_quiz(bot: Bot, session_id: int) -> None:
     await sync_to_async(prepare_questions)(session_id)
     questions = await sync_to_async(pending_questions)(session_id)
 
-    for question in questions:
+    total = len(questions)
+    for i, question in enumerate(questions, start=1):
         if await sync_to_async(is_aborted)(session_id):
             break
         try:
             msg = await bot.send_poll(
                 chat_id=(await sync_to_async(_chat_id)(session_id)),
-                question=question["prompt"],
+                question=f"{i}/{total}) {question['prompt']}"[:300],
                 options=question["options"],
                 type=PollType.QUIZ,
                 correct_option_id=question["correct_option"],
                 is_anonymous=False,
                 open_period=(await sync_to_async(_interval)(session_id)),
                 explanation=question["explanation"],
+                explanation_parse_mode=ParseMode.HTML,
             )
             await sync_to_async(record_poll_sent)(question["id"], msg.poll.id)
         except Exception as exc:  # keep the quiz resilient to a single bad poll

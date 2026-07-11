@@ -286,18 +286,20 @@ async def run_personal_quiz(
     mark skips on timeout, pause after 2 consecutive skips."""
     correct = 0
     skips = 0
-    for question in questions:
+    total = len(questions)
+    for i, question in enumerate(questions, start=1):
         event = asyncio.Event()
         try:
             msg = await bot.send_poll(
                 chat_id=chat_id,
-                question=question["prompt"],
+                question=f"{i}/{total}) {question['prompt']}"[:300],
                 options=question["options"],
                 type=PollType.QUIZ,
                 correct_option_id=question["correct_option"],
                 is_anonymous=False,
                 open_period=timer,
                 explanation=question["explanation"],
+                explanation_parse_mode=ParseMode.HTML,
             )
         except Exception as exc:
             logger.warning("personal quiz poll failed (chat %s): %s", chat_id, exc)

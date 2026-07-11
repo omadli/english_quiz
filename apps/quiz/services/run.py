@@ -1,11 +1,9 @@
 from django.utils import timezone
 
-from apps.learning.services.exam import build_questions
+from apps.learning.services.exam import build_questions, word_explanation
 from apps.quiz.models import GroupQuizQuestion, GroupQuizSession
 from apps.quiz.services.questions import sample_words
 from apps.quiz.services.scoring import build_leaderboard
-
-_EXPLANATION = "@essential_words"
 
 
 def prepare_questions(session_id: int) -> None:
@@ -26,20 +24,20 @@ def pending_questions(session_id: int) -> list[dict]:
     items = []
     questions = (
         GroupQuizQuestion.objects.filter(session_id=session_id)
-        .select_related("word")
+        .select_related("word__unit__book")
         .order_by("order")
     )
     for q in questions:
         word = q.word
         if q.question_type == "en_uz":
-            prompt = f"{word.en} {word.part_of_speech}".strip()
+            prompt = word.en  # English question shows just the word (no part-of-speech)
         elif q.question_type == "uz_en":
             prompt = word.uz
         else:
             prompt = word.definition or word.en
         items.append({
             "id": q.id, "prompt": prompt[:300], "options": q.options,
-            "correct_option": q.correct_option, "explanation": _EXPLANATION,
+            "correct_option": q.correct_option, "explanation": word_explanation(word),
         })
     return items
 
