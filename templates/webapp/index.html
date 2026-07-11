@@ -8,6 +8,21 @@
   <title>4000 Essential Words</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+  <style>
+    @keyframes a-fadeup { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
+    @keyframes a-pop { 0% { transform:scale(.7); opacity:0 } 60% { transform:scale(1.08) } 100% { transform:scale(1); opacity:1 } }
+    @keyframes a-shake { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-7px)} 40%,60%{transform:translateX(7px)} }
+    @keyframes a-flip { from { transform:rotateY(90deg) } to { transform:rotateY(0) } }
+    @keyframes a-pulse { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.55)} 100%{box-shadow:0 0 0 14px rgba(52,211,153,0)} }
+    .a-fadeup { animation: a-fadeup .32s cubic-bezier(.2,.8,.2,1) both }
+    .a-pop { animation: a-pop .42s cubic-bezier(.2,1.25,.4,1) both }
+    .a-shake { animation: a-shake .4s both }
+    .a-flip { animation: a-flip .28s ease-out both }
+    .a-correct { animation: a-pop .3s both, a-pulse .55s ease-out }
+    @media (prefers-reduced-motion: reduce) {
+      .a-fadeup,.a-pop,.a-shake,.a-flip,.a-correct { animation: none !important }
+    }
+  </style>
 </head>
 <body class="font-sans antialiased">
   <header class="sticky top-0 z-20 bg-surface border-b border-line">
@@ -93,7 +108,10 @@
       else { tg.BackButton.hide(); }
     }
     function setHeader(t, s) { titleEl.textContent = t; subtitleEl.textContent = s; }
-    function setContent(cls, html) { contentEl.className = cls; contentEl.innerHTML = html; }
+    function setContent(cls, html) {
+      contentEl.className = cls; contentEl.innerHTML = html;
+      contentEl.classList.remove("a-fadeup"); void contentEl.offsetWidth; contentEl.classList.add("a-fadeup");
+    }
     function loading() { setContent("px-4 py-16 text-center text-sm text-muted", "Yuklanmoqda…"); }
     function message(t) { setContent("px-4 py-16 text-center text-sm text-muted", esc(t)); }
 
@@ -129,56 +147,36 @@
         done && done();
       }
     }
-    function toggleLearned(id) {
-      id = String(id);
-      learned.has(id) ? learned.delete(id) : learned.add(id);
-      const on = learned.has(id);
-      if (initData) {
-        apiLearned("POST", { word_id: Number(id), learned: on }).catch(() => {});
-      } else if (tg && tg.CloudStorage) {
-        const shard = Number(id) % SHARDS;
-        tg.CloudStorage.setItem("learned_" + shard, [...learned].filter((x) => Number(x) % SHARDS === shard).join(","));
-      } else {
-        localStorage.setItem("learned", [...learned].join(","));
-      }
-      return on;
-    }
-
     const speakerSvg = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a9 9 0 0 1 0 12" stroke-linecap="round"/></svg>';
-    const checkSvg = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-    const learnCls = (on) => `js-learn shrink-0 grid h-7 w-7 place-items-center rounded-full border ${on ? "bg-emerald-500/15 text-emerald-400 border-emerald-400/40" : "border-line text-muted"}`;
+    // Essential-book style entry: circular image · green word [ipa] (pos) · red uz · definition · → example.
+    // Learned state is read-only (earned only by tests) — a subtle emerald ring, no manual toggle.
     function wordCard(w) {
       const on = learned.has(String(w.id));
-      const badge = w.part_of_speech ? `<span class="inline-flex items-center rounded-full px-1.5 text-[10px] font-bold uppercase ${posClass(w.part_of_speech)}">${esc(w.part_of_speech)}</span>` : "";
+      const img = w.image
+        ? `<img src="${w.image}" alt="" loading="lazy" class="h-14 w-14 rounded-full object-cover ring-1 ring-line shrink-0">`
+        : `<div class="h-14 w-14 rounded-full bg-accent/10 grid place-items-center text-accent text-lg font-bold shrink-0">${esc((w.en || "?")[0].toUpperCase())}</div>`;
       const ipa = w.pronunciation ? `<span class="text-[11px] text-muted">${esc(w.pronunciation)}</span>` : "";
-      const def = w.definition ? `<p class="text-[13px] text-muted leading-snug">${esc(w.definition)}</p>` : "";
-      const ex = w.example ? `<p class="text-[13px] italic leading-snug border-l-2 border-accent pl-2.5">${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
-      const ctx = (w.book && w.unit) ? `<span class="text-[11px] text-muted">Kitob ${w.book} · Unit ${w.unit}</span>` : "";
-      const hasDetail = ipa || def || ex || ctx;
-      return `<article class="js-card rounded-xl bg-card border border-line overflow-hidden ${on ? "opacity-60" : ""}">
-        <div class="js-top flex items-center gap-2.5 px-3 py-2">
-          <button data-en="${esc(w.en)}" class="js-speak shrink-0 grid h-8 w-8 place-items-center rounded-full bg-accent/10 text-accent">${speakerSvg}</button>
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-1.5"><h3 class="text-[15px] font-bold truncate">${esc(w.en)}</h3>${badge}</div>
-            <p class="text-[13px] text-ink truncate">${esc(w.uz) || "—"}</p>
+      const pos = w.part_of_speech ? `<span class="text-[11px] italic text-muted">${esc(w.part_of_speech)}</span>` : "";
+      const def = w.definition ? `<p class="text-[13px] text-muted leading-snug mt-1">${esc(w.definition)}</p>` : "";
+      const ex = w.example ? `<p class="text-[13px] italic text-ink/80 leading-snug mt-0.5">→ ${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
+      const ctx = (w.book && w.unit) ? `<div class="text-[10px] text-muted mt-1">Kitob ${w.book} · Unit ${w.unit}</div>` : "";
+      return `<article class="flex gap-3 rounded-xl bg-card border p-3 ${on ? "border-emerald-400/40 ring-1 ring-emerald-400/25" : "border-line"}">
+        ${img}
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+            <h3 class="text-[15px] font-bold text-emerald-400">${esc(w.en)}</h3>${ipa}${pos}
+            <button data-en="${esc(w.en)}" class="js-speak ml-auto shrink-0 grid h-7 w-7 place-items-center rounded-full bg-accent/10 text-accent active:scale-90 transition">${speakerSvg}</button>
           </div>
-          <button data-id="${w.id}" class="${learnCls(on)}">${checkSvg}</button>
+          <p class="text-[13px] font-semibold text-rose-400">${esc(w.uz) || "—"}</p>
+          ${def}${ex}${ctx}
         </div>
-        ${hasDetail ? `<div class="js-detail hidden px-3 pb-3 space-y-1.5">${ctx}${ipa ? `<div>${ipa}</div>` : ""}${def}${ex}</div>` : ""}
       </article>`;
     }
     function bindWordCards() {
-      contentEl.querySelectorAll(".js-top").forEach((el) => el.addEventListener("click", () => {
-        const d = el.parentElement.querySelector(".js-detail");
-        if (d) d.classList.toggle("hidden");
-      }));
-      contentEl.querySelectorAll(".js-speak").forEach((el) => el.addEventListener("click", (e) => { e.stopPropagation(); speak(el.dataset.en); }));
-      contentEl.querySelectorAll(".js-learn").forEach((el) => el.addEventListener("click", (e) => {
+      contentEl.querySelectorAll(".js-speak").forEach((el) => el.addEventListener("click", (e) => {
         e.stopPropagation();
-        const on = toggleLearned(el.dataset.id);
-        el.className = learnCls(on);
-        el.closest(".js-card").classList.toggle("opacity-60", on);
+        speak(el.dataset.en);
       }));
     }
 
@@ -387,8 +385,8 @@
           if (el.dataset.uz === w.uz) score++;
           contentEl.querySelectorAll(".js-opt").forEach((b) => {
             b.dataset.answered = "1";
-            if (b.dataset.uz === w.uz) b.classList.add("ring-2", "ring-emerald-400");
-            else if (b === el) b.classList.add("ring-2", "ring-rose-400");
+            if (b.dataset.uz === w.uz) b.classList.add("ring-2", "ring-emerald-400", "a-correct");
+            else if (b === el) b.classList.add("ring-2", "ring-rose-400", "a-shake");
           });
           if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(el.dataset.uz === w.uz ? "success" : "error");
           setTimeout(() => { i++; render(); }, 750);
@@ -397,7 +395,7 @@
       function done() {
         setHeader("Natija", "Test tugadi");
         setContent("px-4 py-16 pb-24 text-center space-y-4",
-          `<div class="text-5xl font-bold tracking-tight">${score}/${qs.length}</div>
+          `<div class="text-5xl font-bold tracking-tight a-pop">${score}/${qs.length}</div>
            <button id="g-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
         document.getElementById("g-again").addEventListener("click", () => startQuiz(words, back));
       }
@@ -415,13 +413,13 @@
         if (isEn) { contentEl.querySelectorAll(".js-en").forEach((b) => b.classList.remove("ring-2", "ring-accent")); sel = el; el.classList.add("ring-2", "ring-accent"); return; }
         if (!sel) return;
         if (sel.dataset.id === el.dataset.id) {
-          [sel, el].forEach((b) => { b.disabled = true; b.classList.remove("ring-2", "ring-accent"); b.classList.add("bg-emerald-500/20", "border-emerald-400/40"); });
+          [sel, el].forEach((b) => { b.disabled = true; b.classList.remove("ring-2", "ring-accent"); b.classList.add("bg-emerald-500/20", "border-emerald-400/40", "a-pop"); });
           sel = null;
           if (++done === pool.length) document.getElementById("js-mmsg").textContent = "✅ Barchasi to'g'ri! 🎉";
         } else {
-          const pair = [sel, el]; pair.forEach((b) => b.classList.add("ring-2", "ring-rose-400"));
+          const pair = [sel, el]; pair.forEach((b) => b.classList.add("ring-2", "ring-rose-400", "a-shake"));
           if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
-          setTimeout(() => pair.forEach((b) => b.classList.remove("ring-2", "ring-rose-400", "ring-accent")), 450);
+          setTimeout(() => pair.forEach((b) => b.classList.remove("ring-2", "ring-rose-400", "ring-accent", "a-shake")), 450);
           sel = null;
         }
       }
@@ -446,7 +444,8 @@
           if (input.disabled) return;
           const ok = input.value.trim().toLowerCase() === w.en.toLowerCase();
           if (ok) score++;
-          input.disabled = true; input.classList.add("ring-2", ok ? "ring-emerald-400" : "ring-rose-400");
+          input.disabled = true;
+          input.classList.add("ring-2", ok ? "ring-emerald-400" : "ring-rose-400", ok ? "a-correct" : "a-shake");
           document.getElementById("sp-res").innerHTML = ok ? '<span class="text-emerald-400">✅ To\'g\'ri</span>' : `<span class="text-rose-400">❌ ${esc(w.en)}</span>`;
           if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(ok ? "success" : "error");
           setTimeout(() => { i++; render(); }, 900);
@@ -457,7 +456,7 @@
       function done() {
         setHeader("Natija", "Yozish tugadi");
         setContent("px-4 py-16 pb-24 text-center space-y-4",
-          `<div class="text-5xl font-bold tracking-tight">${score}/${qs.length}</div><button id="sp-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
+          `<div class="text-5xl font-bold tracking-tight a-pop">${score}/${qs.length}</div><button id="sp-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
         document.getElementById("sp-again").addEventListener("click", () => startSpell(words, back));
       }
       render();
@@ -494,7 +493,7 @@
       function finish() {
         setHeader("Natija", "Vaqt tugadi");
         setContent("px-4 py-16 pb-24 text-center space-y-4",
-          `<div class="text-5xl font-bold tracking-tight">${score}</div><div class="text-sm text-muted">to'g'ri javob</div>
+          `<div class="text-5xl font-bold tracking-tight a-pop">${score}</div><div class="text-sm text-muted">to'g'ri javob</div>
            <button id="spd-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
         document.getElementById("spd-again").addEventListener("click", () => startSpeed(words, back));
       }
@@ -511,14 +510,14 @@
         `<div class="grid grid-cols-3 gap-2">${cards.map((c, idx) =>
           `<button data-idx="${idx}" data-pid="${c.pid}" data-text="${esc(c.text)}" class="js-card aspect-square grid place-items-center rounded-xl bg-card border border-line text-sm font-semibold px-1 text-center">?</button>`).join("")}</div>
          <p id="mem-msg" class="text-center text-sm text-muted mt-4"></p>`);
-      const show = (el) => { el.textContent = el.dataset.text; el.classList.add("ring-2", "ring-accent"); };
-      const hide = (el) => { el.textContent = "?"; el.classList.remove("ring-2", "ring-accent"); };
+      const show = (el) => { el.textContent = el.dataset.text; el.classList.add("ring-2", "ring-accent", "a-flip"); };
+      const hide = (el) => { el.textContent = "?"; el.classList.remove("ring-2", "ring-accent", "a-flip"); };
       contentEl.querySelectorAll(".js-card").forEach((el) => el.addEventListener("click", () => {
         if (lock || el.disabled || el === first) return;
         show(el);
         if (!first) { first = el; return; }
         if (first.dataset.pid === el.dataset.pid) {
-          [first, el].forEach((b) => { b.disabled = true; b.classList.remove("ring-2", "ring-accent"); b.classList.add("bg-emerald-500/20", "border-emerald-400/40"); });
+          [first, el].forEach((b) => { b.disabled = true; b.classList.remove("ring-2", "ring-accent", "a-flip"); b.classList.add("bg-emerald-500/20", "border-emerald-400/40", "a-pop"); });
           if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
           first = null;
           if (++matched === pairs.length) document.getElementById("mem-msg").textContent = "✅ Yakunlandi! 🎉";
