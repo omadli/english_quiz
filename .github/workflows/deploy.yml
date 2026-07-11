@@ -1,0 +1,35 @@
+name: Deploy
+
+# Auto-deploy to the server on every push to main (direct-to-main workflow).
+# The stack runs via Docker Compose; the web container migrates + collectstatic
+# on start, so deploy = pull latest code and rebuild.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two deploys at once; let an in-flight one finish.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            cd ~/english_quiz
+            git fetch origin main
+            git reset --hard origin/main
+            git lfs pull
+            docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+            docker image prune -f
+            docker compose -f compose.yaml -f compose.prod.yaml ps

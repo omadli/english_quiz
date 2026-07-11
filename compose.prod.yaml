@@ -1,0 +1,37 @@
+# Production overrides — used on the server alongside the base compose.yaml:
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+# The stack is self-contained (its own db/redis); nginx on the host reverse-proxies
+# english.omadli.uz -> 127.0.0.1:8001 and serves /media from ./media.
+services:
+  db:
+    # Don't publish 5432 on the server — the host already runs a native Postgres there.
+    ports: !reset []
+    restart: unless-stopped
+
+  redis:
+    # Same: the host already runs a native Redis on 6379.
+    ports: !reset []
+    restart: unless-stopped
+
+  web:
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    # Replace the base 0.0.0.0:8001 mapping — bind localhost only; nginx fronts it.
+    ports: !override
+      - "127.0.0.1:8001:8000"  # 8000/8080 are taken; nginx proxies to 8001
+
+  worker:
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+
+  beat:
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+
+  bot:
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
