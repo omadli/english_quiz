@@ -707,9 +707,10 @@
       function render() {
         if (i >= qs.length) return done();
         const sentence = qs[i].example.replace(/<[^>]+>/g, "").trim();
+        const sentTokens = sentence.split(/\s+/);
         setHeader(`Shadowing ${i + 1}/${qs.length}`, `Ball: ${score}`);
         setContent("px-4 py-6 pb-24 text-center space-y-3",
-          `<div class="rounded-2xl bg-card border border-line p-4 text-[15px] leading-relaxed">${esc(sentence)}</div>
+          `<div id="sh-sentence" class="rounded-2xl bg-card border border-line p-4 text-[15px] leading-relaxed">${sentTokens.map((t, idx) => `<span data-w="${idx}">${esc(t)}</span>`).join(" ")}</div>
            <button id="sh-hear" class="rounded-full bg-card border border-line px-4 py-2 text-sm text-accent active:scale-95 transition">🔊 Eshitish</button>
            <div class="pt-3">
              <button id="sh-mic" class="mx-auto grid h-24 w-24 place-items-center rounded-full bg-accent text-accent-ink text-4xl active:scale-95 transition">🎤</button>
@@ -728,8 +729,13 @@
           rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
           mic.classList.add("a-listen"); res.textContent = "🎙 Tinglanmoqda…"; res.className = "text-sm text-muted min-h-[1.5em]";
           rec.onresult = (e) => {
-            const heard = wordsOf(e.results[0][0].transcript);
-            const matched = target.filter((t) => heard.includes(t)).length;
+            const heardSet = new Set(wordsOf(e.results[0][0].transcript));
+            sentTokens.forEach((tok, idx) => {  // colour each word: caught (green) vs missed (dim)
+              const c = tok.toLowerCase().replace(/[^a-z]/g, "");
+              const span = document.querySelector(`#sh-sentence [data-w="${idx}"]`);
+              if (span && c) span.className = heardSet.has(c) ? "text-emerald-400 font-semibold" : "text-muted";
+            });
+            const matched = target.filter((t) => heardSet.has(t)).length;
             const ratio = target.length ? matched / target.length : 0;
             const ok = ratio >= 0.6;
             mic.classList.remove("a-listen");
