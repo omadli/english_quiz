@@ -16,7 +16,14 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    background: var(--surface);
+    background: var(--surface); /* fallback if color-mix() unsupported */
+    background:
+      radial-gradient(120% 55% at 50% -5%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+      radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+      var(--surface);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: var(--ink);
+    min-height: 100vh;
   }
 }

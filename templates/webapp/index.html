@@ -31,9 +31,14 @@
 </head>
 <body class="font-sans antialiased">
   <header class="sticky top-0 z-20 bg-surface border-b border-line">
-    <div class="px-4 pt-3 pb-2">
-      <h1 id="title" class="text-[19px] font-bold tracking-tight leading-tight">Kitoblar</h1>
-      <p id="subtitle" class="text-xs text-muted mt-0.5">4000 Essential Words</p>
+    <div class="px-4 pt-3 pb-2 flex items-center gap-2.5">
+      <button id="backbtn" class="hidden shrink-0 grid h-9 w-9 place-items-center rounded-full bg-card border border-line text-ink active:scale-90 transition" aria-label="Orqaga">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="min-w-0 flex-1">
+        <h1 id="title" class="text-[19px] font-bold tracking-tight leading-tight truncate">Kitoblar</h1>
+        <p id="subtitle" class="text-xs text-muted mt-0.5 truncate">4000 Essential Words</p>
+      </div>
     </div>
     <div id="searchbar" class="px-4 pb-3">
       <label class="flex items-center gap-2.5 rounded-2xl bg-card border border-line px-3.5 py-2.5">
@@ -71,6 +76,7 @@
     const contentEl = document.getElementById("content");
     const searchEl = document.getElementById("search");
     const searchbarEl = document.getElementById("searchbar");
+    const backBtnEl = document.getElementById("backbtn");
 
     let tab = "books";
     let booksCache = null;
@@ -87,6 +93,9 @@
       "from-rose-500 to-pink-600", "from-violet-500 to-purple-600",
     ];
     const esc = (s) => (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    // Escape everything, then restore a tiny allowlist of inline tags so the
+    // book's bold target word (<strong>) renders, while all else stays safe.
+    const richText = (s) => esc(s).replace(/&lt;(\/?)(b|strong|i|em)&gt;/gi, "<$1$2>");
     const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((x) => x[1]);
 
     async function getJSON(url) {
@@ -107,12 +116,17 @@
       speechSynthesis.speak(u);
     }
 
+    // Navigation: one back action driving BOTH the in-app header button (works
+    // in any browser) and Telegram's native BackButton (when inside Telegram).
+    let _backFn = null;
+    function goBack() { if (_backFn) _backFn(); }
     function setBack(fn) {
-      if (!tg || !tg.BackButton) return;
-      tg.BackButton.offClick();
-      if (fn) { tg.BackButton.onClick(fn); tg.BackButton.show(); }
-      else { tg.BackButton.hide(); }
+      _backFn = fn;
+      backBtnEl.classList.toggle("hidden", !fn);
+      if (tg && tg.BackButton) { fn ? tg.BackButton.show() : tg.BackButton.hide(); }
     }
+    backBtnEl.addEventListener("click", goBack);
+    if (tg && tg.BackButton) tg.BackButton.onClick(goBack);
     function setHeader(t, s) { titleEl.textContent = t; subtitleEl.textContent = s; }
     function setContent(cls, html) {
       contentEl.className = cls; contentEl.innerHTML = html;
@@ -164,8 +178,8 @@
         : `<div class="h-14 w-14 rounded-full bg-accent/10 grid place-items-center text-accent text-lg font-bold shrink-0">${esc((w.en || "?")[0].toUpperCase())}</div>`;
       const ipa = w.pronunciation ? `<span class="text-[11px] text-muted">${esc(w.pronunciation)}</span>` : "";
       const pos = w.part_of_speech ? `<span class="text-[11px] italic text-muted">${esc(w.part_of_speech)}</span>` : "";
-      const def = w.definition ? `<p class="text-[13px] text-muted leading-snug mt-1">${esc(w.definition)}</p>` : "";
-      const ex = w.example ? `<p class="text-[13px] italic text-ink/80 leading-snug mt-0.5">→ ${esc(w.example.replace(/<[^>]+>/g, ""))}</p>` : "";
+      const def = w.definition ? `<p class="text-[13px] text-muted leading-snug mt-1">${richText(w.definition)}</p>` : "";
+      const ex = w.example ? `<p class="text-[13px] italic text-ink/80 leading-snug mt-0.5">→ ${richText(w.example)}</p>` : "";
       const ctx = (w.book && w.unit) ? `<div class="text-[10px] text-muted mt-1">Kitob ${w.book} · Unit ${w.unit}</div>` : "";
       return `<article class="flex gap-3 rounded-xl bg-card border p-3 ${on ? "border-emerald-400/40 ring-1 ring-emerald-400/25" : "border-line"}">
         ${img}
