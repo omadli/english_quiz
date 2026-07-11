@@ -7,11 +7,12 @@ from django.conf import settings
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.accounts.models import TelegramAccount
 from apps.catalog.models import Book, Unit, Word
-from apps.learning.models import LearnedWord, LearningProfile
+from apps.learning.models import DailySession, LearnedWord, LearningProfile
 
 
 def _word_payload(w: Word, with_context: bool = False) -> dict:
@@ -183,6 +184,29 @@ def api_profile(request):
                 setattr(profile, key, value)
             profile.save(update_fields=[*updates.keys(), "updated_at"])
     return JsonResponse(_profile_payload(profile))
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_today(request):
+    """Today's daily-session words for the caller (the morning task), replayable in-app."""
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    from zoneinfo import ZoneInfo
+
+    today = timezone.now().astimezone(ZoneInfo(profile.timezone)).date()
+    session = DailySession.objects.filter(user=profile.user, date=today).first()
+    if session is None:
+        return JsonResponse({"words": [], "status": "none"})
+    words = [
+        sw.word
+        for sw in session.session_words.select_related("word__unit__book").order_by("order")
+    ]
+    return JsonResponse({
+        "status": session.status,
+        "date": today.isoformat(),
+        "words": [_word_payload(w, with_context=True) for w in words],
+    })
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie

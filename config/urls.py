@@ -23,6 +23,7 @@ urlpatterns = [
     path("webapp/api/search/", catalog_views.api_search, name="webapp_search"),
     path("webapp/api/profile/", catalog_views.api_profile, name="webapp_profile"),
     path("webapp/api/learned/", catalog_views.api_learned, name="webapp_learned"),
+    path("webapp/api/today/", catalog_views.api_today, name="webapp_today"),
 ]
 
 if settings.DEBUG:

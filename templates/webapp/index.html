@@ -58,6 +58,9 @@
     <button data-tab="books" class="js-tab flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px]">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H6a2 2 0 0 1-2-2Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Kitoblar</button>
+    <button data-tab="today" class="js-tab flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px]">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
+      Bugun</button>
     <button data-tab="games" class="js-tab flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px]">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 11h4m-2-2v4m5-1h.01M18 12h.01M17 5a4 4 0 0 1 4 4v.5a6.5 6.5 0 0 1-6.5 6.5c-1 0-1.9-.5-2.5-1.3-.6.8-1.5 1.3-2.5 1.3A6.5 6.5 0 0 1 3 9.5V9a4 4 0 0 1 4-4Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Mashqlar</button>
@@ -174,7 +177,7 @@
     function wordCard(w) {
       const on = learned.has(String(w.id));
       const img = w.image
-        ? `<img src="${w.image}" alt="" loading="lazy" class="h-14 w-14 rounded-full object-cover ring-1 ring-line shrink-0">`
+        ? `<img src="${w.image}" alt="" loading="lazy" decoding="async" onload="this.style.opacity=1" class="h-14 w-14 rounded-full object-cover ring-1 ring-line shrink-0" style="opacity:0;transition:opacity .35s ease;background:var(--card)">`
         : `<div class="h-14 w-14 rounded-full bg-accent/10 grid place-items-center text-accent text-lg font-bold shrink-0">${esc((w.en || "?")[0].toUpperCase())}</div>`;
       const ipa = w.pronunciation ? `<span class="text-[11px] text-muted">${esc(w.pronunciation)}</span>` : "";
       const pos = w.part_of_speech ? `<span class="text-[11px] italic text-muted">${esc(w.part_of_speech)}</span>` : "";
@@ -292,11 +295,8 @@
       contentEl.querySelectorAll(".js-gunit").forEach((el) => el.addEventListener("click", () =>
         showGamePick(book, { id: el.dataset.id, number: el.dataset.n })));
     }
-    async function showGamePick(book, unit) {
-      loading(); setHeader(`Unit ${unit.number}`, "O'yinni tanlang"); setBack(() => showGameUnits(book));
-      const { words } = await getJSON(`api/words/${unit.id}/`);
-      if (words.length < 4) return message("O'yin uchun so'z yetarli emas.");
-      const back = () => showGamePick(book, unit);
+    // Reusable 5-game menu for any word set (unit games, today's exam). Caller sets header/back.
+    function gameMenu(words, back) {
       setContent("px-4 py-6 pb-24 space-y-3",
         `<button id="g-quiz" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-4 active:scale-[.99] transition">🧩 Test — variantli savol</button>
          <button id="g-speed" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">⚡ Tezlik — 30 soniyada</button>
@@ -308,6 +308,36 @@
       document.getElementById("g-memory").addEventListener("click", () => startMemory(words, back));
       document.getElementById("g-match").addEventListener("click", () => startMatch(words, back));
       document.getElementById("g-spell").addEventListener("click", () => startSpell(words, back));
+    }
+    async function showGamePick(book, unit) {
+      loading(); setHeader(`Unit ${unit.number}`, "O'yinni tanlang"); setBack(() => showGameUnits(book));
+      const { words } = await getJSON(`api/words/${unit.id}/`);
+      if (words.length < 4) return message("O'yin uchun so'z yetarli emas.");
+      gameMenu(words, () => showGamePick(book, unit));
+    }
+
+    // ---- BUGUN tab (today's morning task + exam) ---------------------------
+    async function apiToday() { return getJSON("api/today/"); }
+    async function showToday() {
+      loading(); setHeader("Bugungi vazifa", "Ertalabki so'zlar"); setBack(null);
+      let words = [];
+      try { words = (await apiToday()).words || []; } catch (e) { words = []; }
+      if (!words.length) {
+        return message("Bugungi vazifa hali yo'q — ertalab belgilangan vaqtda keladi 🌅");
+      }
+      const exam = words.length >= 4
+        ? `<button id="t-exam" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3.5 active:scale-[.99] transition">🎯 Imtihon topshirish</button>` : "";
+      setContent("px-4 py-4 pb-24 space-y-3",
+        `<div class="text-center text-[13px] text-muted">📅 Bugun: <b class="text-ink">${words.length} ta so'z</b> — takrorlang va imtihon topshiring</div>` +
+        exam + words.map(wordCard).join(""));
+      bindWordCards();
+      if (words.length >= 4) {
+        document.getElementById("t-exam").addEventListener("click", () => showTodayExam(words));
+      }
+    }
+    function showTodayExam(words) {
+      setHeader("Imtihon", "Bugungi so'zlar bo'yicha"); setBack(() => showToday());
+      gameMenu(words, () => showTodayExam(words));
     }
 
     // ---- PROFIL tab --------------------------------------------------------
@@ -613,6 +643,7 @@
       document.querySelectorAll(".js-tab").forEach((el) =>
         el.classList.toggle("text-accent", el.dataset.tab === next) || el.classList.toggle("text-muted", el.dataset.tab !== next));
       if (next === "books") showBooks();
+      else if (next === "today") showToday();
       else if (next === "games") showGamesHome();
       else showProfile();
     }

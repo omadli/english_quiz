@@ -169,6 +169,46 @@ def test_api_units_no_learned_key_without_auth(client):
     assert "learned" not in resp.json()["units"][0]  # anonymous → no per-user data
 
 
+def test_api_today_requires_auth(client, settings):
+    settings.BOT_TOKEN = TOKEN
+    assert client.get("/webapp/api/today/").status_code == 401
+
+
+def test_api_today_returns_ordered_session_words(client, settings):
+    from zoneinfo import ZoneInfo
+
+    from django.utils import timezone
+
+    from apps.learning.models import DailySession, LearningProfile, SessionWord
+
+    settings.BOT_TOKEN = TOKEN
+    user = _user(555)
+    profile = LearningProfile.objects.create(user=user)  # default tz Asia/Tashkent
+    book = Book.objects.create(number=1, title="B1", slug="b1")
+    unit = Unit.objects.create(book=book, number=1)
+    w1 = Word.objects.create(unit=unit, en="a", uz="a", order=1)
+    w2 = Word.objects.create(unit=unit, en="b", uz="b", order=2)
+    today = timezone.now().astimezone(ZoneInfo(profile.timezone)).date()
+    session = DailySession.objects.create(user=user, date=today)
+    SessionWord.objects.create(daily_session=session, word=w2, order=2)  # inserted out of order
+    SessionWord.objects.create(daily_session=session, word=w1, order=1)
+
+    resp = client.get(
+        "/webapp/api/today/", HTTP_X_TELEGRAM_INIT_DATA=_init_data({"id": 555, "first_name": "Ali"})
+    )
+    data = resp.json()
+    assert [w["en"] for w in data["words"]] == ["a", "b"]  # ordered by SessionWord.order
+
+
+def test_api_today_empty_without_session(client, settings):
+    settings.BOT_TOKEN = TOKEN
+    _user(555)
+    resp = client.get(
+        "/webapp/api/today/", HTTP_X_TELEGRAM_INIT_DATA=_init_data({"id": 555, "first_name": "Ali"})
+    )
+    assert resp.json() == {"words": [], "status": "none"}
+
+
 def test_learned_has_no_manual_post(client, settings):
     """Manual marking was removed — POST must not create a LearnedWord."""
     settings.BOT_TOKEN = TOKEN
