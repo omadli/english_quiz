@@ -122,6 +122,7 @@ QUIZ_PAUSED = (
     "Davom etish: 🧠 Test / Quiz."
 )
 QUIZ_RESULT = "🏁 <b>Mashq tugadi!</b>\nNatija: <b>{correct}/{total}</b> to'g'ri 🎯"
+QUIZ_LEARNED_MARKED = "📚 <b>{n}</b> so'z «o'rganilgan» deb belgilandi ✅"
 BTN_ALL_UNITS = "🗂 Hammasi"
 BTN_START = "🚀 Boshlash"
 BTN_NEXT_STEP = "Keyingi ➡️"

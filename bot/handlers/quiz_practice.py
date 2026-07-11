@@ -16,6 +16,7 @@ from django.conf import settings as dj_settings
 
 from apps.catalog.models import Book, Unit
 from apps.learning.services.exam import build_questions
+from apps.learning.services.progress import mark_words_learned
 from apps.quiz.services.questions import sample_words
 from apps.quiz.services.quiz_code import MAX_LEN, card_for, encode_quiz
 from apps.quiz.services.share import save_shared_quiz
@@ -320,3 +321,8 @@ async def run_personal_quiz(
     await bot.send_message(
         chat_id, strings.QUIZ_RESULT.format(correct=correct, total=len(questions))
     )
+    # Completing the test is the ONLY way its words become 'learned' (no manual marking).
+    word_ids = [q["word"].id for q in questions if q.get("word")]
+    marked = await sync_to_async(mark_words_learned)(chat_id, word_ids)
+    if marked:
+        await bot.send_message(chat_id, strings.QUIZ_LEARNED_MARKED.format(n=marked))

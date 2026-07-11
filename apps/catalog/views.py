@@ -175,21 +175,10 @@ def api_profile(request):
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
 def api_learned(request):
-    """GET → the user's learned word ids; POST {word_id, learned} toggles one."""
+    """GET → the user's learned word ids (read-only). Learned state is earned by
+    completing tests (marked bot-side), not toggled manually — there is no POST."""
     profile = _profile_from_request(request)
     if profile is None:
         return JsonResponse({"error": "unauthorized"}, status=401)
-    if request.method == "POST":
-        try:
-            payload = json.loads(request.body or b"{}")
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "bad json"}, status=400)
-        word_id = _as_int(payload.get("word_id")) if isinstance(payload, dict) else None
-        if word_id is None or not Word.objects.filter(pk=word_id).exists():
-            return JsonResponse({"error": "bad word"}, status=400)
-        if payload.get("learned"):
-            LearnedWord.objects.get_or_create(user=profile.user, word_id=word_id)
-        else:
-            LearnedWord.objects.filter(user=profile.user, word_id=word_id).delete()
     ids = list(LearnedWord.objects.filter(user=profile.user).values_list("word_id", flat=True))
     return JsonResponse({"ids": ids})

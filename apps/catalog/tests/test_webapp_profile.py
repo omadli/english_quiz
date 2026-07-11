@@ -128,33 +128,11 @@ def test_learned_requires_auth(client, settings):
     assert client.get("/webapp/api/learned/").status_code == 401
 
 
-def test_learned_toggle_on_then_off(client, settings):
-    settings.BOT_TOKEN = TOKEN
-    user = _user(555)
-    word = _word()
-    auth = _init_data({"id": 555, "first_name": "Ali"})
-
-    on = client.post(
-        "/webapp/api/learned/", data=json.dumps({"word_id": word.id, "learned": True}),
-        content_type="application/json", HTTP_X_TELEGRAM_INIT_DATA=auth,
-    )
-    assert on.status_code == 200
-    assert on.json()["ids"] == [word.id]
-    assert LearnedWord.objects.filter(user=user, word=word).exists()
-
-    off = client.post(
-        "/webapp/api/learned/", data=json.dumps({"word_id": word.id, "learned": False}),
-        content_type="application/json", HTTP_X_TELEGRAM_INIT_DATA=auth,
-    )
-    assert off.json()["ids"] == []
-    assert not LearnedWord.objects.filter(user=user, word=word).exists()
-
-
 def test_learned_get_lists_ids_and_reflects_in_profile(client, settings):
     settings.BOT_TOKEN = TOKEN
     user = _user(555)
     word = _word()
-    LearnedWord.objects.create(user=user, word=word)
+    LearnedWord.objects.create(user=user, word=word)  # earned via a test, marked bot-side
     auth = _init_data({"id": 555, "first_name": "Ali"})
 
     listed = client.get("/webapp/api/learned/", HTTP_X_TELEGRAM_INIT_DATA=auth)
@@ -164,12 +142,14 @@ def test_learned_get_lists_ids_and_reflects_in_profile(client, settings):
     assert prof.json()["learned_words"] == 1
 
 
-def test_learned_rejects_unknown_word(client, settings):
+def test_learned_has_no_manual_post(client, settings):
+    """Manual marking was removed — POST must not create a LearnedWord."""
     settings.BOT_TOKEN = TOKEN
-    _user(555)
-    resp = client.post(
-        "/webapp/api/learned/", data=json.dumps({"word_id": 999999, "learned": True}),
+    user = _user(555)
+    word = _word()
+    client.post(
+        "/webapp/api/learned/", data=json.dumps({"word_id": word.id, "learned": True}),
         content_type="application/json",
         HTTP_X_TELEGRAM_INIT_DATA=_init_data({"id": 555, "first_name": "Ali"}),
     )
-    assert resp.status_code == 400
+    assert not LearnedWord.objects.filter(user=user, word=word).exists()
