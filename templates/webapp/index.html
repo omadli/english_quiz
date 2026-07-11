@@ -24,8 +24,10 @@
     .node-face { transition: transform .12s ease }
     .node-wrap:active .node-face { transform: scale(.9) }
     .node-cur .node-face { animation: a-bob 1.5s ease-in-out infinite, a-ring 2s ease-in-out infinite }
+    @keyframes a-listen { 0%,100%{box-shadow:0 0 0 0 rgba(108,92,231,.6)} 50%{box-shadow:0 0 0 20px rgba(108,92,231,0)} }
+    .a-listen { animation: a-listen 1.1s ease-in-out infinite }
     @media (prefers-reduced-motion: reduce) {
-      .a-fadeup,.a-pop,.a-shake,.a-flip,.a-correct,.node-cur .node-face { animation: none !important }
+      .a-fadeup,.a-pop,.a-shake,.a-flip,.a-correct,.node-cur .node-face,.a-listen { animation: none !important }
     }
   </style>
 </head>
@@ -302,12 +304,14 @@
          <button id="g-speed" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">⚡ Tezlik — 30 soniyada</button>
          <button id="g-memory" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🧠 Xotira — juftlarni oching</button>
          <button id="g-match" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🎮 Juftlash — en ↔ uz</button>
-         <button id="g-spell" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">✍️ Yozish — so'zni ter</button>`);
+         <button id="g-spell" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">✍️ Yozish — so'zni ter</button>
+         <button id="g-speech" class="w-full rounded-2xl bg-card border border-line font-semibold py-4 active:scale-[.99] transition">🎤 Talaffuz — ovoz bilan ayting</button>`);
       document.getElementById("g-quiz").addEventListener("click", () => startQuiz(words, back));
       document.getElementById("g-speed").addEventListener("click", () => startSpeed(words, back));
       document.getElementById("g-memory").addEventListener("click", () => startMemory(words, back));
       document.getElementById("g-match").addEventListener("click", () => startMatch(words, back));
       document.getElementById("g-spell").addEventListener("click", () => startSpell(words, back));
+      document.getElementById("g-speech").addEventListener("click", () => startSpeech(words, back));
     }
     async function showGamePick(book, unit) {
       loading(); setHeader(`Unit ${unit.number}`, "O'yinni tanlang"); setBack(() => showGameUnits(book));
@@ -618,6 +622,74 @@
           setTimeout(() => { pair.forEach(hide); first = null; lock = false; }, 700);
         }
       }));
+    }
+    // ---- speech: say the word aloud, the browser checks your pronunciation --
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const normEn = (s) => (s || "").toLowerCase().replace(/[^a-z\s]/g, "").trim();
+    function startSpeech(words, back) {
+      setBack(back);
+      if (!SpeechRec) {
+        return message("😔 Bu qurilma ovozli tanishni qo'llab-quvvatlamaydi. Chrome brauzerida oching.");
+      }
+      const qs = shuffle(words.filter((w) => w.en)).slice(0, 10);
+      let i = 0, score = 0;
+      function render() {
+        if (i >= qs.length) return done();
+        const w = qs[i];
+        setHeader(`Talaffuz ${i + 1}/${qs.length}`, `Ball: ${score}`);
+        setContent("px-4 py-8 pb-24 text-center space-y-3",
+          `<div class="text-3xl font-bold tracking-tight">${esc(w.en)}</div>
+           <div class="text-sm text-muted">${esc(w.pronunciation || "")}</div>
+           <button id="spk-hear" class="rounded-full bg-card border border-line px-4 py-2 text-sm text-accent active:scale-95 transition">🔊 Tinglash</button>
+           <div class="pt-5">
+             <button id="spk-mic" class="mx-auto grid h-24 w-24 place-items-center rounded-full bg-accent text-accent-ink text-4xl active:scale-95 transition">🎤</button>
+             <div class="text-xs text-muted mt-3">Tugmani bosib, so'zni ayting</div>
+           </div>
+           <p id="spk-res" class="text-sm min-h-[1.5em]"></p>`);
+        document.getElementById("spk-hear").addEventListener("click", () => speak(w.en));
+        const mic = document.getElementById("spk-mic"), res = document.getElementById("spk-res");
+        let busy = false;
+        mic.addEventListener("click", () => {
+          if (busy) return;
+          busy = true;
+          const rec = new SpeechRec();
+          rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 5;
+          mic.classList.add("a-listen"); res.textContent = "🎙 Tinglanmoqda…"; res.className = "text-sm text-muted min-h-[1.5em]";
+          rec.onresult = (e) => {
+            const alts = [...e.results[0]].map((r) => normEn(r.transcript));
+            const target = normEn(w.en);
+            const ok = alts.some((a) => a === target || a.split(" ").includes(target));
+            mic.classList.remove("a-listen");
+            if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(ok ? "success" : "error");
+            if (ok) {
+              score++;
+              res.innerHTML = '<span class="text-emerald-400">✅ To\'g\'ri talaffuz!</span>';
+              mic.classList.add("a-correct");
+              setTimeout(() => { i++; render(); }, 1100);
+            } else {
+              res.innerHTML = `<span class="text-rose-400">❌ Eshitildi: "${esc(alts[0] || "—")}"</span> — qayta urining`;
+              mic.classList.add("a-shake");
+              setTimeout(() => mic.classList.remove("a-shake"), 500);
+              busy = false;
+            }
+          };
+          rec.onerror = (e) => {
+            mic.classList.remove("a-listen");
+            const msg = e.error === "not-allowed" ? "Mikrofonga ruxsat bering" : "Ovoz eshitilmadi";
+            res.innerHTML = `<span class="text-rose-400">${msg} — qayta urining</span>`;
+            busy = false;
+          };
+          try { rec.start(); } catch (err) { mic.classList.remove("a-listen"); busy = false; }
+        });
+      }
+      function done() {
+        setHeader("Natija", "Talaffuz tugadi");
+        setContent("px-4 py-16 pb-24 text-center space-y-4",
+          `<div class="text-5xl font-bold tracking-tight a-pop">${score}/${qs.length}</div>
+           <button id="spk-again" class="mt-2 rounded-2xl bg-accent text-accent-ink font-semibold px-6 py-3 active:scale-95 transition">Qaytadan</button>`);
+        document.getElementById("spk-again").addEventListener("click", () => startSpeech(words, back));
+      }
+      render();
     }
 
     // ---- search (Kitoblar tab) --------------------------------------------
