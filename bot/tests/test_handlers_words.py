@@ -55,15 +55,16 @@ async def test_wl_unit_missing_unit_noops(mock_uw):
     callback.message.edit_text.assert_not_awaited()
 
 
-def test_detail_block_rich_formatting_and_strips_example_tags():
+def test_detail_block_rich_formatting_and_keeps_example_bold():
     w = MagicMock(en="afraid", uz="qo'rqqan", part_of_speech="adj.",
                   pronunciation="[əˈfreid]", definition="feel fear",
-                  example="was <strong>afraid</strong>")
+                  example="was <strong>afraid</strong> of <spiders>")
     block = words._detail_block(1, w)
     assert "<b>afraid</b>" in block
     assert "<code>[əˈfreid]</code>" in block
     assert "<blockquote>feel fear</blockquote>" in block
-    assert "<strong>" not in block  # example HTML stripped
+    assert "<i>was <strong>afraid</strong>" in block   # book's bold target word kept
+    assert "&lt;spiders&gt;" in block                  # non-allowlisted markup stays escaped
 
 
 def test_pack_splits_over_limit():

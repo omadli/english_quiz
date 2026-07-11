@@ -1,9 +1,10 @@
 import asyncio
+import re
 
 from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from asgiref.sync import sync_to_async
-from django.utils.html import escape, strip_tags
+from django.utils.html import escape
 
 from apps.catalog.models import Book, Unit, Word
 from apps.common.tts import get_tts_provider
@@ -113,14 +114,22 @@ async def wl_unit(callback: CallbackQuery) -> None:
     )
 
 
+_KEEP_TAGS = re.compile(r"&lt;(/?)(b|strong|i|em)&gt;", re.IGNORECASE)
+
+
+def _rich(text: str) -> str:
+    """Escape for Telegram HTML but keep the book's inline emphasis tags (bold target word)."""
+    return _KEEP_TAGS.sub(lambda m: f"<{m.group(1)}{m.group(2).lower()}>", escape(text or ""))
+
+
 def _detail_block(index: int, w: Word) -> str:
     ipa = f" <code>{escape(w.pronunciation)}</code>" if w.pronunciation else ""
     pos = f" <i>({escape(w.part_of_speech)})</i>" if w.part_of_speech else ""
     parts = [f"{index}) <b>{escape(w.en)}</b>{ipa}{pos} — <b>{escape(w.uz) or '—'}</b>"]
     if w.definition:
-        parts.append(f"<blockquote>{escape(w.definition)}</blockquote>")
+        parts.append(f"<blockquote>{_rich(w.definition)}</blockquote>")
     if w.example:
-        parts.append(f"<i>{escape(strip_tags(w.example))}</i>")
+        parts.append(f"<i>{_rich(w.example)}</i>")
     return "\n".join(parts)
 
 

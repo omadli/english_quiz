@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 from pathlib import Path
 
@@ -61,12 +62,13 @@ class Command(BaseCommand):
                     unit=unit,
                     en=f["en"],
                     defaults={
-                        "uz": f.get("uz") or "",
+                        # decode HTML entities (&ldquo; &rsquo; …) so text renders cleanly
+                        "uz": html.unescape(f.get("uz") or ""),
                         "order": orders[unit_no],
                         "pronunciation": ipa[:100],
                         "part_of_speech": pos[:20],
-                        "definition": f.get("definition") or "",
-                        "example": f.get("example") or "",
+                        "definition": html.unescape(f.get("definition") or ""),
+                        "example": html.unescape(f.get("example") or ""),
                     },
                 )
                 image_rel = f.get("image")
