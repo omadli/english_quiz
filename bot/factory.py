@@ -9,6 +9,7 @@ from bot.handlers import (
     common,
     daily,
     group_quiz,
+    guardian,
     leaderboard,
     menu,
     onboarding,
@@ -38,6 +39,7 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(quiz.router)
     dp.include_router(group_quiz.router)
     dp.include_router(relations.router)
+    dp.include_router(guardian.router)
     dp.include_router(leaderboard.router)
     dp.include_router(books.router)
     dp.include_router(menu.router)

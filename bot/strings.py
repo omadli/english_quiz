@@ -71,6 +71,9 @@ NOTHING_TO_CANCEL = "Bekor qiladigan amal yo'q."
 GENERIC_ERROR = "⚠️ Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring."
 
 NO_WARDS = "Hali hech kim ulanmagan. /parent yoki /teacher bilan havola oling."
+WARDS_PICK = "👨‍👩‍👧 O'quvchini tanlang:"
+WARD_MENU = "👤 <b>{name}</b> — nima qilamiz?"
+WARD_REVOKED = "🗑 O'quvchi ajratildi."
 PICK_WARD = "Kimning hisobotini ko'rmoqchisiz?"
 
 NUDGE_STUDY = "📚 So'zlarni takrorlayapsizmi? Kechqurun imtihon bor — tayyorlaning! 💪"
