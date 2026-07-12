@@ -3,7 +3,12 @@ import asyncio
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode, PollType
-from aiogram.types import BufferedInputFile
+from aiogram.types import (
+    BufferedInputFile,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    WebAppInfo,
+)
 
 from bot.config import get_bot_token
 
@@ -12,25 +17,57 @@ def _make_bot() -> Bot:
     return Bot(token=get_bot_token(), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
-async def _send_daily(bot: Bot, chat_id: int, card: bytes | None, items: list[dict]) -> None:
-    if card:
-        await bot.send_photo(chat_id, BufferedInputFile(card, "card.png"))
-    for item in items:
-        if item.get("image"):
-            await bot.send_photo(
-                chat_id, BufferedInputFile(item["image"], "word.jpg"), caption=item["caption"]
-            )
-        else:
-            await bot.send_message(chat_id, item["caption"])
-        if item.get("audio"):
-            await bot.send_audio(chat_id, BufferedInputFile(item["audio"], "word.mp3"))
+def _batafsil_markup(webapp_url: str | None) -> InlineKeyboardMarkup | None:
+    if not webapp_url:
+        return None
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="📖 Batafsil", web_app=WebAppInfo(url=webapp_url))
+    ]])
 
 
-def send_daily(chat_id: int, card: bytes | None, items: list[dict]) -> None:
+async def _send_daily(
+    bot: Bot, chat_id: int, caption: str, audio: bytes | None, webapp_url: str | None = None
+) -> None:
+    """Morning task: one audio (caption = the word list) + a 'Batafsil' WebApp button.
+    If there's no audio, send the list as a plain message; if the caption exceeds
+    Telegram's 1024-char media caption cap, send the list first, then a short audio."""
+    markup = _batafsil_markup(webapp_url)
+    if audio is None:
+        await bot.send_message(chat_id, caption, reply_markup=markup)
+        return
+    if len(caption) > 1024:
+        await bot.send_message(chat_id, caption)
+        await bot.send_audio(
+            chat_id, BufferedInputFile(audio, "words.mp3"),
+            caption="🔊 Bugungi so'zlar", reply_markup=markup,
+        )
+    else:
+        await bot.send_audio(
+            chat_id, BufferedInputFile(audio, "words.mp3"),
+            caption=caption, reply_markup=markup,
+        )
+
+
+def send_daily(
+    chat_id: int, caption: str, audio: bytes | None, webapp_url: str | None = None
+) -> None:
     async def _run() -> None:
         bot = _make_bot()
         try:
-            await _send_daily(bot, chat_id, card, items)
+            await _send_daily(bot, chat_id, caption, audio, webapp_url)
+        finally:
+            await bot.session.close()
+
+    asyncio.run(_run())
+
+
+def send_text(chat_id: int, text: str) -> None:
+    """Send a plain HTML text message (reports, nudges, referrals)."""
+
+    async def _run() -> None:
+        bot = _make_bot()
+        try:
+            await bot.send_message(chat_id, text)
         finally:
             await bot.session.close()
 

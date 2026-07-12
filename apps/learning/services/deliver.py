@@ -1,9 +1,11 @@
+import html
+
 from aiogram.exceptions import TelegramForbiddenError
+from django.conf import settings as dj_settings
 from django.utils import timezone
 
 from apps.learning.models import DailySession, LearningProfile, SessionWord, WordProgress
-from apps.learning.services.audio import build_word_audio
-from apps.learning.services.cards import render_daily_card
+from apps.learning.services.audio import build_daily_audio
 from apps.learning.services.delivery import advance_position, next_words
 from bot.sender import send_daily
 
@@ -14,16 +16,22 @@ def _local_date(profile: LearningProfile):
     return timezone.now().astimezone(ZoneInfo(profile.timezone)).date()
 
 
-def _caption(word) -> str:
-    parts = [f"<b>{word.en}</b> {word.part_of_speech}".strip()]
-    if word.pronunciation:
-        parts.append(word.pronunciation)
-    parts.append(f"🇺🇿 {word.uz}")
-    if word.definition:
-        parts.append(f"\n<i>{word.definition}</i>")
-    if word.example:
-        parts.append(word.example)
-    return "\n".join(parts)
+def _word_list_caption(words) -> str:
+    """The morning message body: a numbered list of `word [IPA] — translation`."""
+    lines = ["📅 <b>Bugungi so'zlar</b>", ""]
+    for i, w in enumerate(words, 1):
+        ipa = f" <i>{html.escape(w.pronunciation)}</i>" if w.pronunciation else ""
+        lines.append(f"{i}. <b>{html.escape(w.en)}</b>{ipa} — {html.escape(w.uz)}")
+    lines.append("")
+    lines.append("🔊 Audio: inglizcha talaffuz + o'zbekcha tarjima")
+    return "\n".join(lines)
+
+
+def _webapp_today_url() -> str | None:
+    base = dj_settings.WEBAPP_URL
+    if not base:
+        return None
+    return f"{base}{'&' if '?' in base else '?'}view=today"
 
 
 def run_delivery(user_id: int) -> DailySession | None:
@@ -49,22 +57,22 @@ def run_delivery(user_id: int) -> DailySession | None:
 
     words = next_words(profile, profile.words_per_session)
     if not words:
-        # Course finished — nothing left to deliver; send nothing, leave session pending.
+        # Course finished — nothing left to deliver; leave the session pending.
         return None
 
-    items = []
     for order, word in enumerate(words, start=1):
         SessionWord.objects.get_or_create(
             daily_session=session, word=word, defaults={"order": order}
         )
         WordProgress.objects.get_or_create(user_id=user_id, word=word)
-        image = word.image.read() if word.image else None
-        audio = build_word_audio(word, profile.audio_repeat) if profile.audio_enabled else None
-        items.append({"caption": _caption(word), "image": image, "audio": audio})
 
-    card = render_daily_card(words, date)
+    audio = (
+        build_daily_audio(words, profile.en_voice, profile.uz_voice, profile.audio_repeat)
+        if profile.audio_enabled
+        else None
+    )
     try:
-        send_daily(account.telegram_id, card, items)
+        send_daily(account.telegram_id, _word_list_caption(words), audio, _webapp_today_url())
     except TelegramForbiddenError:
         account.blocked_bot = True
         account.save(update_fields=["blocked_bot", "updated_at"])
@@ -96,9 +104,8 @@ def today_session_words(user_id: int) -> list:
     ]
 
 
-def today_session_items(user_id: int):
-    """Rebuild the morning payload (card + per-word image/caption/audio) for today's
-    session so it can be re-sent on demand — like the morning delivery, no advancing."""
+def today_session_payload(user_id: int):
+    """Rebuild today's (caption, audio) so 'Bugungi vazifa' can re-send the morning task."""
     profile, session = _today_session(user_id)
     if session is None:
         return None
@@ -108,9 +115,9 @@ def today_session_items(user_id: int):
     ]
     if not words:
         return None
-    items = []
-    for word in words:
-        image = word.image.read() if word.image else None
-        audio = build_word_audio(word, profile.audio_repeat) if profile.audio_enabled else None
-        items.append({"caption": _caption(word), "image": image, "audio": audio})
-    return render_daily_card(words, _local_date(profile)), items
+    audio = (
+        build_daily_audio(words, profile.en_voice, profile.uz_voice, profile.audio_repeat)
+        if profile.audio_enabled
+        else None
+    )
+    return _word_list_caption(words), audio
