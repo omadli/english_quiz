@@ -24,6 +24,8 @@ def test_profile_defaults():
     assert p.onboarded is False
     assert p.is_active is True
     assert p.current_word_order == 0
+    assert p.en_voice == "en-US-AriaNeural"
+    assert p.uz_voice == "uz-UZ-MadinaNeural"
 
 
 def test_studies_today():
