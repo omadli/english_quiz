@@ -8,6 +8,7 @@ WELCOME_NEW = (
 )
 WELCOME_BACK = "Xush kelibsiz! 👋✨ Quyidagi menyudan foydalaning 👇"
 LINKED_OK = "✅ Muvaffaqiyatli ulandingiz! Endi hisobotlarni olib turasiz."
+WARD_JOINED = "👤 <b>{name}</b> siz bilan ({role}) ulandi. /wards orqali sozlang."
 ONBOARD_START_BTN = "🚀 Sozlashni boshlash"
 ONBOARD_DEFAULTS_BTN = "⚡ Standart bilan boshlash"
 
