@@ -361,18 +361,44 @@
     // ---- BUGUN tab (today's morning task + exam) ---------------------------
     async function apiToday() { return getJSON("api/today/"); }
     async function showToday() {
-      loading(); setHeader("Bugungi vazifa", "Ertalabki so'zlar"); setBack(null);
+      loading(); setHeader("Bugungi so'zlar", "Ertalabki mashq"); setBack(null);
       let words = [];
       try { words = (await apiToday()).words || []; } catch (e) { words = []; }
       if (!words.length) {
-        return message("Bugungi vazifa hali yo'q — ertalab belgilangan vaqtda keladi 🌅");
+        setContent("px-4 py-6 pb-24",
+          `<div class="rounded-2xl bg-card border border-line p-7 text-center space-y-3">
+             <div class="text-5xl">🌅</div>
+             <div class="text-[17px] font-bold">Bugungi so'zlar hali kelmadi</div>
+             <p class="text-[13px] text-muted leading-relaxed">Har kuni ertalab yangi so'zlar to'plami botda avtomatik yuboriladi. Kutib turing — yoki hoziroq mashq qiling.</p>
+             <div class="grid grid-cols-2 gap-2.5 pt-1">
+               <button id="e-books" class="rounded-xl bg-accent text-accent-ink font-semibold py-2.5 text-sm active:scale-95 transition">📚 Kitoblar</button>
+               <button id="e-games" class="rounded-xl bg-card border border-line font-semibold py-2.5 text-sm active:scale-95 transition">🎮 Mashqlar</button>
+             </div>
+           </div>`);
+        document.getElementById("e-books").addEventListener("click", () => setTab("books"));
+        document.getElementById("e-games").addEventListener("click", () => setTab("games"));
+        return;
       }
       const exam = words.length >= 4
         ? `<button id="t-exam" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3.5 active:scale-[.99] transition">🎯 Imtihon topshirish</button>` : "";
       setContent("px-4 py-4 pb-24 space-y-3",
-        `<div class="text-center text-[13px] text-muted">📅 Bugun: <b class="text-ink">${words.length} ta so'z</b> — takrorlang va imtihon topshiring</div>` +
+        `<div class="rounded-2xl bg-card border border-line p-4 flex items-center justify-between gap-3">
+           <div>
+             <div class="text-[15px] font-bold">📅 Bugun <span class="hl">${words.length} ta so'z</span></div>
+             <div class="text-[12px] text-muted mt-0.5">tinglang, takrorlang, imtihon topshiring</div>
+           </div>
+           <button id="t-play" class="shrink-0 grid h-11 w-11 place-items-center rounded-full bg-accent text-accent-ink text-lg active:scale-90 transition" aria-label="Barcha so'zlarni tinglash">▶︎</button>
+         </div>` +
         exam + words.map(wordCard).join(""));
       bindWordCards();
+      document.getElementById("t-play").addEventListener("click", () => {
+        try { speechSynthesis.cancel(); } catch (e) {}
+        words.forEach((w) => {
+          const u = new SpeechSynthesisUtterance(w.en);
+          u.lang = "en-GB"; u.rate = 0.95;
+          speechSynthesis.speak(u);
+        });
+      });
       if (words.length >= 4) {
         document.getElementById("t-exam").addEventListener("click", () => showTodayExam(words));
       }
