@@ -466,10 +466,16 @@
       if (!wards.length) return;  // not a guardian → show nothing
       box.innerHTML = `<div class="rounded-2xl bg-card border border-line p-5 space-y-2">
         <div class="text-sm font-semibold">👨‍👩‍👧 Nazorat</div>` +
-        wards.map((w) => `<button data-id="${w.id}" data-name="${esc(w.name)}" class="js-ward w-full text-left rounded-xl bg-line/40 px-3 py-2 text-sm">${esc(w.name)} ⚙️</button>`).join("") +
+        wards.map((w) => `<div class="flex gap-2">
+          <button data-id="${w.id}" data-name="${esc(w.name)}" class="js-warddash flex-1 text-left rounded-xl bg-line/40 px-3 py-2 text-sm">${esc(w.name)}</button>
+          <button data-id="${w.id}" data-name="${esc(w.name)}" class="js-warddash-btn rounded-xl bg-line/40 px-3 py-2 text-sm" title="Dashboard">📊</button>
+          <button data-id="${w.id}" data-name="${esc(w.name)}" class="js-ward rounded-xl bg-line/40 px-3 py-2 text-sm" title="Sozlamalar">⚙️</button>
+        </div>`).join("") +
         `</div>`;
       box.querySelectorAll(".js-ward").forEach((el) => el.addEventListener("click", () =>
         showWardSettings(el.dataset.id, el.dataset.name)));
+      box.querySelectorAll(".js-warddash, .js-warddash-btn").forEach((el) => el.addEventListener("click", () =>
+        showWardDashboard(el.dataset.id, el.dataset.name)));
     }
     async function showWardSettings(id, name) {
       setHeader(name, "O'quvchi sozlamalari"); setBack(() => showProfile());
@@ -500,6 +506,52 @@
       });
     }
 
+    // ---- dashboard (stats + inline-SVG charts) -----------------------------
+    function _bar(trend) {
+      if (!trend.length) return `<p class="text-xs text-muted">Hali imtihon yo'q.</p>`;
+      const w = 300, h = 64, n = trend.length, gap = 2;
+      const bw = Math.max(3, (w - gap * (n - 1)) / n);
+      const bars = trend.map((t, i) => {
+        const pct = t.total ? t.correct / t.total : 0;
+        const bh = Math.max(2, Math.round(pct * (h - 4)));
+        const x = i * (bw + gap);
+        return `<rect x="${x.toFixed(1)}" y="${h - bh}" width="${bw.toFixed(1)}" height="${bh}" rx="1.5" fill="#10b981"><title>${t.date}: ${t.correct}/${t.total}</title></rect>`;
+      }).join("");
+      return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:64px" preserveAspectRatio="none" role="img" aria-label="Kunlik imtihon aniqligi trendi">${bars}</svg>`;
+    }
+    const _dashColor = (s) => s === "completed" ? "#10b981" : s === "none" ? "var(--line)" : "#f59e0b";
+    function _grid(activity) {
+      const cells = activity.map((a) =>
+        `<div class="aspect-square rounded-sm" style="background:${_dashColor(a.status)}" title="${a.date} · ${a.status}"></div>`).join("");
+      const chip = (c, l) => `<span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:${c}"></span>${l}</span>`;
+      const legend = `<div class="flex gap-3 text-[10px] text-muted mt-2">${chip("#10b981", "bajarilgan")}${chip("#f59e0b", "qisman")}${chip("var(--line)", "yo'q")}</div>`;
+      return `<div class="grid grid-cols-10 gap-1">${cells}</div>${legend}`;
+    }
+    function dashboardHTML(d) {
+      const tile = (v, l) => `<div class="rounded-2xl bg-card border border-line py-4 text-center"><div class="text-2xl font-bold">${v}</div><div class="text-[11px] text-muted">${l}</div></div>`;
+      const card = (title, inner) => `<div class="rounded-2xl bg-card border border-line p-4"><div class="text-sm font-semibold mb-2">${title}</div>${inner}</div>`;
+      const errs = d.error_words.length
+        ? d.error_words.map((e) => `<div class="flex justify-between text-[13px] py-0.5"><span><b class="text-emerald-400">${esc(e.en)}</b> — ${esc(e.uz)}</span><span class="text-rose-400">${e.wrong}×</span></div>`).join("")
+        : `<p class="text-xs text-muted">Xato so'z yo'q 🎉</p>`;
+      return `
+        <div class="grid grid-cols-3 gap-3">
+          ${tile("🔥 " + d.streak, "streak")}${tile(d.accuracy.pct + "%", "aniqlik")}${tile(d.learned, "yodlandi")}
+        </div>
+        ${card("📈 Aniqlik trendi", _bar(d.trend))}
+        ${card("🗓 Faollik (30 kun)", _grid(d.activity) + `<div class="text-[11px] text-muted mt-2">Bajarilmagan kunlar: <b>${d.missed_days.count}</b></div>`)}
+        ${card("❌ Ko'p xato so'zlar", errs)}`;
+    }
+    async function loadDashboard(boxId, url) {
+      const box = document.getElementById(boxId);
+      if (!box || !initData) return;
+      try { box.innerHTML = dashboardHTML(await getJSON(url)); } catch (e) { /* leave empty */ }
+    }
+    async function showWardDashboard(id, name) {
+      setHeader(name, "Dashboard"); setBack(() => showProfile());
+      setContent("px-4 py-4 pb-24 space-y-3", `<div id="warddash" class="space-y-3"></div>`);
+      loadDashboard("warddash", `ward/${id}/dashboard/`);
+    }
+
     async function showProfile() {
       loading(); setHeader("Profil", "Sizning progressingiz"); setBack(null);
       const list = await books();
@@ -518,8 +570,10 @@
            <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${total}</div><div class="text-[11px] text-muted">so'z</div></div>
            <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${done}</div><div class="text-[11px] text-muted">o'rgandim</div></div>
          </div>
+         <div id="dash" class="space-y-3"></div>
          <div id="settings"><p class="text-center text-xs text-muted">Yuklanmoqda…</p></div>
          <div id="wards"></div>`);
+      loadDashboard("dash", "api/dashboard/");
       loadSettings();
       loadWards();
     }

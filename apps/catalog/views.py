@@ -14,6 +14,7 @@ from apps.accounts.models import TelegramAccount
 from apps.catalog.models import Book, Unit, Word
 from apps.common.tts import EN_VOICES, UZ_VOICES
 from apps.learning.models import DailySession, LearnedWord, LearningProfile
+from apps.learning.services.dashboard import build_dashboard
 from apps.relations.services.guardian import ward_profile
 from apps.relations.services.reports import guardian_wards
 
@@ -218,6 +219,27 @@ def api_today(request):
         "date": today.isoformat(),
         "words": [_word_payload(w, with_context=True) for w in words],
     })
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_dashboard(request):
+    """The caller's own stats dashboard."""
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    return JsonResponse(build_dashboard(profile.user))
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_ward_dashboard(request, learner_id: int):
+    """One ward's dashboard — only for the ward's active guardian."""
+    caller = _profile_from_request(request)
+    if caller is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    profile = ward_profile(caller.user, learner_id)
+    if profile is None:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    return JsonResponse(build_dashboard(profile.user))
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
