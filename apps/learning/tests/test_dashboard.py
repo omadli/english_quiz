@@ -56,9 +56,9 @@ def test_dashboard_missed_days_respects_studydays_and_first_activity():
     _session(user, today - datetime.timedelta(days=1), DailySession.Status.DELIVERED)  # not completed
     d = build_dashboard(user)
     dates = d["missed_days"]["dates"]
-    assert (today - datetime.timedelta(days=1)).isoformat() in dates      # study day, missed
-    assert (today - datetime.timedelta(days=2)).isoformat() in dates      # inside window
-    assert (today - datetime.timedelta(days=5)).isoformat() not in dates  # before first activity
+    assert (today - datetime.timedelta(days=1)).isoformat() in dates  # study day, missed
+    assert (today - datetime.timedelta(days=2)).isoformat() in dates  # inside window
+    assert (today - datetime.timedelta(days=5)).isoformat() not in dates  # before first
 
 
 def test_dashboard_rest_day_not_missed():
