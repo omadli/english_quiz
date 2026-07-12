@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>4000 Essential Words — ingliz tili so'zlarini yodlash</title>
+  <meta name="description" content="Har kuni ertalab yangi ingliz so'zlari, talaffuz audiosi, kechqurun imtihon va progress hisoboti. Telegram bot orqali — bepul.">
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root {
+      --bg: #f7f5ef; --card: #ffffff; --ink: #17140d; --muted: #6b6558;
+      --line: rgba(23,20,13,.10); --line-2: rgba(23,20,13,.06);
+      --accent: #e6a700; --accent-ink: #241a00; --accent-deep: #a97800;
+      --ok: #12a150; --rose: #d63d43;
+      --mark: rgba(230,167,0,.42);
+      --shadow: 0 1px 2px rgba(23,20,13,.05), 0 22px 48px -26px rgba(23,20,13,.30);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #100e0a; --card: #1a1712; --ink: #f3efe4; --muted: #a49c8b;
+        --line: rgba(180,170,150,.16); --line-2: rgba(180,170,150,.09);
+        --accent: #eba400; --accent-ink: #201700; --accent-deep: #f0be55;
+        --ok: #34d399; --rose: #f2686d; --mark: rgba(235,164,0,.30);
+        --shadow: 0 1px 2px rgba(0,0,0,.4), 0 26px 54px -28px rgba(0,0,0,.7);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased; line-height: 1.55;
+    }
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+    .hl { background: linear-gradient(180deg, transparent 56%, var(--mark) 56%, var(--mark) 94%, transparent 94%); padding: 0 .05em; }
+    .eyebrow { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-deep); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font: inherit; font-weight: 700; border-radius: 13px; padding: 13px 22px; font-size: 15px; transition: transform .1s ease; }
+    .btn:active { transform: scale(.97); }
+    .btn-gold { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow); }
+    .btn-ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+
+    /* nav */
+    nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-2); }
+    nav .row { display: flex; align-items: center; justify-content: space-between; height: 62px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -.01em; }
+    .brand .mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(140deg, var(--accent), var(--accent-deep)); color: var(--accent-ink); display: grid; place-items: center; font-size: 16px; }
+    .nav-cta { font-size: 14px; }
+
+    /* hero */
+    .hero { padding: 64px 0 40px; text-align: center; }
+    .hero h1 { font-size: clamp(32px, 6.4vw, 56px); line-height: 1.05; letter-spacing: -.03em; margin: 16px auto 0; max-width: 15ch; text-wrap: balance; font-weight: 850; }
+    .hero p.lede { font-size: clamp(16px, 2.4vw, 19px); color: var(--muted); max-width: 56ch; margin: 18px auto 0; }
+    .hero .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+    .hero .note { font-size: 13px; color: var(--muted); margin-top: 14px; }
+
+    /* stat strip */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 48px; }
+    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 14px; text-align: center; box-shadow: var(--shadow); }
+    .stat .v { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+    .stat .l { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    /* section */
+    section { padding: 56px 0; }
+    .sec-head { text-align: center; max-width: 42ch; margin: 0 auto 34px; }
+    .sec-head h2 { font-size: clamp(24px, 4vw, 34px); letter-spacing: -.02em; margin: 10px 0 0; text-wrap: balance; }
+    .sec-head p { color: var(--muted); margin: 10px 0 0; }
+
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .feat { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; box-shadow: var(--shadow); }
+    .feat .ic { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; font-size: 23px; background: color-mix(in srgb, var(--accent) 15%, transparent); }
+    .feat h3 { font-size: 17px; margin: 14px 0 6px; letter-spacing: -.01em; }
+    .feat p { color: var(--muted); font-size: 14px; margin: 0; }
+
+    /* steps */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: s; }
+    .step { position: relative; padding: 22px; border-radius: 18px; border: 1px dashed var(--line); }
+    .step .n { counter-increment: s; font-size: 13px; font-weight: 800; color: var(--accent-deep); }
+    .step .n::before { content: counter(s, decimal-leading-zero); }
+    .step h3 { font-size: 16px; margin: 8px 0 6px; }
+    .step p { color: var(--muted); font-size: 14px; margin: 0; }
+
+    /* cta band */
+    .band { background: var(--card); border: 1px solid var(--line); border-radius: 26px; padding: 44px 28px; text-align: center; box-shadow: var(--shadow); }
+    .band h2 { font-size: clamp(24px, 4vw, 32px); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+    .band p { color: var(--muted); margin: 12px auto 24px; max-width: 48ch; }
+
+    footer { border-top: 1px solid var(--line-2); padding: 30px 0; color: var(--muted); font-size: 13px; }
+    footer .row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+    @media (max-width: 760px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .features, .steps { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap row">
+      <a class="brand" href="/"><span class="mark">📖</span> Essential Words</a>
+      {% if user.is_authenticated %}
+      <a class="btn btn-gold nav-cta" href="/app/">Kabinet</a>
+      {% else %}
+      <a class="btn btn-ghost nav-cta" href="/login/">Kirish</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <header class="hero wrap">
+    <span class="eyebrow">Ingliz tili · 4000 muhim so'z</span>
+    <h1>Har kuni <span class="hl">bir nechta so'z</span> — bir yilda ingliz tili lug'ati</h1>
+    <p class="lede">Bot har ertalab yangi so'zlar to'plamini rasm va talaffuz audiosi bilan yuboradi. Kechqurun imtihon, interval takror (SRS) va progress hisoboti bilan mustahkam yodda qoladi.</p>
+    <div class="cta">
+      <a class="btn btn-gold" href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">Telegram'da boshlash →</a>
+      <a class="btn btn-ghost" href="/login/">Kabinetga kirish</a>
+    </div>
+    <p class="note">Bepul · Telegram orqali · 1 daqiqada sozlanadi</p>
+
+    <div class="stats">
+      <div class="stat"><div class="v">4000</div><div class="l">muhim so'z</div></div>
+      <div class="stat"><div class="v">6</div><div class="l">daraja / kitob</div></div>
+      <div class="stat"><div class="v">🎧</div><div class="l">har so'z audiosi</div></div>
+      <div class="stat"><div class="v">SRS</div><div class="l">interval takror</div></div>
+    </div>
+  </header>
+
+  <section class="wrap" id="features">
+    <div class="sec-head">
+      <span class="eyebrow">Imkoniyatlar</span>
+      <h2>O'rganishni <span class="hl">oson</span> qiladigan hamma narsa</h2>
+      <p>Yodlash, mustahkamlash va kuzatish — bitta joyda, har kuni.</p>
+    </div>
+    <div class="features">
+      <div class="feat"><div class="ic">🌅</div><h3>Ertalabki so'zlar</h3><p>Har kuni belgilangan vaqtda yangi so'zlar to'plami — rasm, ta'rif, misol va bitta audio bilan avtomatik keladi.</p></div>
+      <div class="feat"><div class="ic">🎧</div><h3>Tabiiy talaffuz</h3><p>Inglizcha talaffuz va o'zbekcha tarjima audiosi. Ovoz (erkak/ayol) va takror sonini o'zingiz sozlaysiz.</p></div>
+      <div class="feat"><div class="ic">🎯</div><h3>Imtihon + SRS</h3><p>Kechqurun native quiz-savollar. Interval takror algoritmi (SM-2) unutishdan oldin so'zni qaytaradi.</p></div>
+      <div class="feat"><div class="ic">📊</div><h3>Progress hisoboti</h3><p>Streak, imtihon aniqligi, ko'p xato qilingan so'zlar va bajarilmagan kunlar — grafiklar bilan.</p></div>
+      <div class="feat"><div class="ic">👨‍👩‍👧</div><h3>Ota-ona nazorati</h3><p>Ota-ona yoki o'qituvchi farzand/o'quvchini biriktiradi, sozlamalarini boshqaradi va hisobotini ko'radi.</p></div>
+      <div class="feat"><div class="ic">🎮</div><h3>O'yin va mashqlar</h3><p>Quiz, moslashtirish, tezlik, xotira, talaffuz va shadowing — o'rganishni qiziqarli qiladi.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap" id="how">
+    <div class="sec-head">
+      <span class="eyebrow">3 qadam</span>
+      <h2>Bugun boshlang</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="n"></div><h3>Botni oching</h3><p>Telegram'da botni <b>/start</b> qiling va 1 daqiqada sozlang — kuniga nechta so'z, qaysi vaqtda.</p></div>
+      <div class="step"><div class="n"></div><h3>Har kuni o'rganing</h3><p>Ertalab so'zlarni tinglang va takrorlang, kechqurun imtihon topshiring.</p></div>
+      <div class="step"><div class="n"></div><h3>Progressni kuzating</h3><p>Streakni saqlang, statistikani ko'ring — kabinet yoki Mini App orqali.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="band">
+      <h2>Ingliz tili lug'atini <span class="hl">bugun</span> mustahkamlang</h2>
+      <p>Botni oching yoki Telegram username'ingiz bilan kabinetga kiring — hech qanday parol kerak emas.</p>
+      <div class="cta" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a class="btn btn-gold" href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">Telegram'da boshlash →</a>
+        <a class="btn btn-ghost" href="/login/">Kabinetga kirish</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap row">
+      <span>© Essential Words · 4000 Essential English Words</span>
+      <span><a href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">Telegram bot</a> · <a href="/login/">Kabinet</a></span>
+    </div>
+  </footer>
+</body>
+</html>

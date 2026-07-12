@@ -8,6 +8,7 @@ from apps.catalog import views as catalog_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", accounts_views.landing, name="landing"),
     # Web app (Faza 5): passwordless login + dashboard
     path("login/", accounts_views.login_page, name="login"),
     path("logout/", accounts_views.logout_view, name="logout"),

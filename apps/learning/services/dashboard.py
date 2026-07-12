@@ -20,7 +20,12 @@ def build_dashboard(user, days: int = 30) -> dict:
     pct = round(correct / answered_n * 100) if answered_n else 0
 
     trend = [
-        {"date": r["daily_session__date"].isoformat(), "correct": r["correct"], "total": r["n"]}
+        {
+            "date": r["daily_session__date"].isoformat(),
+            "correct": r["correct"],
+            "total": r["n"],
+            "pct": round(r["correct"] / r["n"] * 100) if r["n"] else 0,
+        }
         for r in answered.filter(daily_session__date__gte=start)
         .values("daily_session__date")
         .annotate(n=Count("id"), correct=Count("id", filter=Q(is_correct=True)))

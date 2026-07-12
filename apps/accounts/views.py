@@ -16,6 +16,11 @@ from apps.accounts.services.login import request_login_code, verify_login_code
 _BACKEND = "django.contrib.auth.backends.ModelBackend"  # required: we bypass authenticate()
 
 
+def landing(request):
+    """Public marketing homepage."""
+    return render(request, "web/landing.html", {"bot_username": settings.BOT_USERNAME})
+
+
 @ensure_csrf_cookie  # guarantee the csrftoken cookie is set for the JS fetch POSTs
 def login_page(request):
     if request.user.is_authenticated:
@@ -75,7 +80,13 @@ def api_session_init(request):
 
 @login_required
 def dashboard(request):
-    return render(request, "web/dashboard.html")
+    from apps.learning.services.dashboard import build_dashboard
+
+    return render(
+        request,
+        "web/dashboard.html",
+        {"d": build_dashboard(request.user), "bot_username": settings.BOT_USERNAME},
+    )
 
 
 @require_POST  # a GET <img src="/logout/"> must not be able to log the user out

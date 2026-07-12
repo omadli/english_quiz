@@ -4,30 +4,123 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kabinet — Essential Words</title>
+  <meta name="color-scheme" content="light dark">
   <style>
-    :root { --bg:#0b1020; --card:#151b2e; --line:#26304a; --ink:#eef2ff; --muted:#8b96b3; --accent:#6366f1; }
-    * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; background:radial-gradient(120% 120% at 50% 0%, #16203c 0%, var(--bg) 60%);
-           color:var(--ink); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-    .wrap { max-width:720px; margin:0 auto; padding:20px 18px 60px; }
-    .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
-    .brand { font-weight:700; letter-spacing:-.02em; }
-    .logout { background:none; border:1px solid var(--line); color:var(--muted); border-radius:12px;
-              padding:8px 14px; font-size:13px; cursor:pointer; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:26px 22px; }
-    .hi { font-size:22px; font-weight:700; letter-spacing:-.02em; }
-    .muted { color:var(--muted); font-size:14px; margin:8px 0 0; }
+    :root {
+      --bg: #f7f5ef; --card: #ffffff; --ink: #17140d; --muted: #6b6558;
+      --line: rgba(23,20,13,.10); --accent: #e6a700; --accent-ink: #241a00; --accent-deep: #a97800;
+      --ok: #12a150; --rose: #d63d43; --mark: rgba(230,167,0,.42);
+      --shadow: 0 1px 2px rgba(23,20,13,.05), 0 20px 44px -26px rgba(23,20,13,.28);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #100e0a; --card: #1a1712; --ink: #f3efe4; --muted: #a49c8b;
+        --line: rgba(180,170,150,.16); --accent: #eba400; --accent-ink: #201700; --accent-deep: #f0be55;
+        --ok: #34d399; --rose: #f2686d; --mark: rgba(235,164,0,.30);
+        --shadow: 0 1px 2px rgba(0,0,0,.4), 0 24px 50px -28px rgba(0,0,0,.7);
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+           font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+    a { color: inherit; text-decoration: none; }
+    .hl { background: linear-gradient(180deg, transparent 56%, var(--mark) 56%, var(--mark) 94%, transparent 94%); padding: 0 .05em; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 18px 18px 64px; }
+    .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; letter-spacing: -.01em; }
+    .brand .m { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(140deg, var(--accent), var(--accent-deep)); color: var(--accent-ink); display: grid; place-items: center; font-size: 15px; }
+    .logout { background: var(--card); border: 1px solid var(--line); color: var(--muted); border-radius: 11px; padding: 8px 14px; font: inherit; font-size: 13px; cursor: pointer; }
+    .grid { display: grid; gap: 14px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
+    .card h3 { margin: 0 0 12px; font-size: 14px; }
+    .sect { position: relative; display: inline-block; }
+    .sect::after { content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 7px; background: var(--mark); border-radius: 4px; z-index: -1; transform: rotate(-.7deg); }
+    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+    .streak { font-size: 54px; font-weight: 800; letter-spacing: -.04em; line-height: .9; position: relative; display: inline-block; }
+    .streak .sw { position: absolute; left: -5px; right: -5px; bottom: 7px; height: 16px; background: var(--mark); border-radius: 6px; transform: rotate(-1.6deg); z-index: -1; }
+    .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .mini > div { border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; }
+    .mini .v { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+    .mini .v small { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .mini .l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .trend { display: flex; align-items: flex-end; gap: 3px; height: 84px; padding-top: 8px; }
+    .trend .b { flex: 1; background: color-mix(in srgb, var(--accent) 60%, transparent); border-radius: 3px 3px 2px 2px; min-height: 4px; }
+    .trend .b.now { background: var(--accent); }
+    .cal { display: grid; grid-template-columns: repeat(15, 1fr); gap: 5px; }
+    .cal i { aspect-ratio: 1; border-radius: 4px; background: var(--line); }
+    .cal i.done { background: var(--ok); }
+    .cal i.part { background: var(--accent); }
+    .legend { display: flex; gap: 14px; margin-top: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 10px; height: 10px; border-radius: 3px; }
+    .rev { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); }
+    .rev:first-child { border-top: 0; }
+    .rev .w { font-weight: 700; } .rev .w small { color: var(--muted); font-weight: 500; margin-left: 8px; }
+    .rev .x { font-size: 12px; font-weight: 700; color: var(--rose); background: color-mix(in srgb, var(--rose) 12%, transparent); padding: 3px 9px; border-radius: 999px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font: inherit; font-weight: 700; border-radius: 12px; padding: 12px 18px; font-size: 14px; }
+    .btn-gold { background: var(--accent); color: var(--accent-ink); }
+    .muted { color: var(--muted); font-size: 13px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="top">
-      <span class="brand">🧠 Essential Words</span>
+      <a class="brand" href="/"><span class="m">📖</span> Essential Words</a>
       <form method="post" action="/logout/">{% csrf_token %}<button class="logout">Chiqish</button></form>
     </div>
-    <div class="card">
-      <div class="hi">Salom, {{ user.first_name|default:"do'st" }}! 👋</div>
-      <p class="muted">Shaxsiy kabinet tez orada — statistika, streak, o'rganish progressi shu yerda bo'ladi.</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="muted" style="margin-bottom:10px">Salom, {{ user.first_name|default:"do'st" }}! 👋</div>
+        <div class="hero">
+          <div>
+            <div class="streak">{{ d.streak }}<span class="sw"></span></div>
+            <div class="muted" style="margin-top:6px">kunlik seriya — davom eting</div>
+          </div>
+          <div style="font-size:34px">🔥</div>
+        </div>
+        <div class="mini">
+          <div><div class="v">{{ d.accuracy.pct }}<small>%</small></div><div class="l">imtihon aniqligi</div></div>
+          <div><div class="v">{{ d.learned }}<small> / {{ d.total }}</small></div><div class="l">yodlangan so'z</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="sect">Aniqlik trendi</span></h3>
+        {% if d.trend %}
+          <div class="trend" role="img" aria-label="Kunlik imtihon aniqligi trendi">
+            {% for t in d.trend %}<div class="b{% if forloop.last %} now{% endif %}" style="height:{{ t.pct }}%" title="{{ t.date }}: {{ t.correct }}/{{ t.total }}"></div>{% endfor %}
+          </div>
+        {% else %}<p class="muted">Hali imtihon topshirilmagan.</p>{% endif %}
+      </div>
+
+      <div class="card">
+        <h3><span class="sect">Faollik — 30 kun</span></h3>
+        <div class="cal">
+          {% for a in d.activity %}<i class="{% if a.status == 'completed' %}done{% elif a.status == 'none' %}{% else %}part{% endif %}" title="{{ a.date }}"></i>{% endfor %}
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--ok)"></i>bajarilgan</span>
+          <span><i style="background:var(--accent)"></i>qisman</span>
+          <span><i style="background:var(--line)"></i>yo'q</span>
+        </div>
+        <p class="muted" style="margin:12px 0 0">Bajarilmagan kunlar: <b style="color:var(--ink)">{{ d.missed_days.count }}</b></p>
+      </div>
+
+      <div class="card">
+        <h3><span class="sect">Takrorlash kerak</span></h3>
+        {% for e in d.error_words %}
+          <div class="rev"><div class="w">{{ e.en }}<small>{{ e.uz }}</small></div><span class="x">{{ e.wrong }}×</span></div>
+        {% empty %}
+          <p class="muted">Xato so'z yo'q — zo'r! 🎉</p>
+        {% endfor %}
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div><b>Har kuni davom eting</b><div class="muted">Botda yangi so'zlar va imtihon sizni kutmoqda.</div></div>
+        <a class="btn btn-gold" href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">Botni ochish →</a>
+      </div>
     </div>
   </div>
 </body>
