@@ -13,6 +13,7 @@ dependencies = [
     "django-celery-beat>=2.7",
     "pillow>=11.0",
     "gtts>=2.5",
+    "edge-tts>=6.1",
     "requests>=2.32",
     "whitenoise>=6.8",
     "gunicorn>=23.0",
