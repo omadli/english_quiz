@@ -13,7 +13,13 @@ from bot.keyboards.onboarding import (
     weekdays_keyboard,
     words_keyboard,
 )
-from bot.keyboards.settings import settings_keyboard
+from apps.common.tts import voice_label
+from bot.keyboards.settings import (
+    en_voice_keyboard,
+    repeat_keyboard,
+    settings_keyboard,
+    uz_voice_keyboard,
+)
 from bot.states.onboarding import OnboardingStates
 
 router = Router()
@@ -30,6 +36,9 @@ def format_profile(profile: LearningProfile) -> str:
         f"• {strings.SETTINGS_MORNING}: <b>{profile.morning_time:%H:%M}</b>",
         f"• {strings.SETTINGS_EXAM}: <b>{profile.exam_time:%H:%M}</b>",
         f"• {strings.SETTINGS_AUDIO}: <b>{audio}</b>",
+        f"• {strings.SETTINGS_EN_VOICE}: <b>{voice_label(profile.en_voice)}</b>",
+        f"• {strings.SETTINGS_UZ_VOICE}: <b>{voice_label(profile.uz_voice)}</b>",
+        f"• {strings.SETTINGS_REPEAT}: <b>{profile.audio_repeat}</b>",
         f"• {strings.SETTINGS_NUDGES}: <b>{nudges}</b>",
         "",
         strings.SETTINGS_EDIT_HINT,
@@ -39,7 +48,7 @@ def format_profile(profile: LearningProfile) -> str:
 @router.message(Command("settings"))
 async def cmd_settings(message: Message, state: FSMContext, profile: LearningProfile) -> None:
     await state.clear()
-    await message.answer(format_profile(profile), reply_markup=settings_keyboard())
+    await message.answer(format_profile(profile), reply_markup=settings_keyboard(profile))
 
 
 async def _seed_profile(state: FSMContext, profile: LearningProfile) -> None:
@@ -104,4 +113,60 @@ async def toggle_nudges(callback: CallbackQuery, profile: LearningProfile) -> No
     await callback.answer()
     profile.nudges_enabled = not profile.nudges_enabled
     await sync_to_async(profile.save)(update_fields=["nudges_enabled", "updated_at"])
-    await callback.message.edit_text(format_profile(profile), reply_markup=settings_keyboard())
+    await callback.message.edit_text(
+        format_profile(profile), reply_markup=settings_keyboard(profile)
+    )
+
+
+@router.callback_query(F.data == "set:envoice")
+async def edit_en_voice(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    await callback.message.edit_text(
+        strings.SETTINGS_EN_VOICE, reply_markup=en_voice_keyboard(profile.en_voice)
+    )
+
+
+@router.callback_query(F.data == "set:uzvoice")
+async def edit_uz_voice(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    await callback.message.edit_text(
+        strings.SETTINGS_UZ_VOICE, reply_markup=uz_voice_keyboard(profile.uz_voice)
+    )
+
+
+@router.callback_query(F.data == "set:repeat")
+async def edit_repeat(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    await callback.message.edit_text(
+        strings.ASK_AUDIO_REPEAT, reply_markup=repeat_keyboard(profile.audio_repeat)
+    )
+
+
+@router.callback_query(F.data.startswith("envoice:"))
+async def save_en_voice(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    profile.en_voice = callback.data.split(":", 1)[1]
+    await sync_to_async(profile.save)(update_fields=["en_voice", "updated_at"])
+    await callback.message.edit_text(
+        format_profile(profile), reply_markup=settings_keyboard(profile)
+    )
+
+
+@router.callback_query(F.data.startswith("uzvoice:"))
+async def save_uz_voice(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    profile.uz_voice = callback.data.split(":", 1)[1]
+    await sync_to_async(profile.save)(update_fields=["uz_voice", "updated_at"])
+    await callback.message.edit_text(
+        format_profile(profile), reply_markup=settings_keyboard(profile)
+    )
+
+
+@router.callback_query(F.data.startswith("repeat:"))
+async def save_repeat(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    profile.audio_repeat = int(callback.data.split(":", 1)[1])
+    await sync_to_async(profile.save)(update_fields=["audio_repeat", "updated_at"])
+    await callback.message.edit_text(
+        format_profile(profile), reply_markup=settings_keyboard(profile)
+    )
