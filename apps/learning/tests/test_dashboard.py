@@ -52,8 +52,9 @@ def test_dashboard_missed_days_respects_studydays_and_first_activity():
     user = User.objects.create(first_name="Kid")
     LearningProfile.objects.create(user=user, study_weekdays=[0, 1, 2, 3, 4, 5, 6])  # every day
     today = timezone.localdate()
-    _session(user, today - datetime.timedelta(days=3), DailySession.Status.COMPLETED)  # first activity
-    _session(user, today - datetime.timedelta(days=1), DailySession.Status.DELIVERED)  # not completed
+    # first activity 3 days ago (completed); yesterday delivered-not-completed → missed
+    _session(user, today - datetime.timedelta(days=3), DailySession.Status.COMPLETED)
+    _session(user, today - datetime.timedelta(days=1), DailySession.Status.DELIVERED)
     d = build_dashboard(user)
     dates = d["missed_days"]["dates"]
     assert (today - datetime.timedelta(days=1)).isoformat() in dates  # study day, missed
