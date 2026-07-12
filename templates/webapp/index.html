@@ -29,6 +29,42 @@
     @media (prefers-reduced-motion: reduce) {
       .a-fadeup,.a-pop,.a-shake,.a-flip,.a-correct,.node-cur .node-face,.a-listen { animation: none !important }
     }
+
+    /* ===== Redesign: own "highlighter gold" identity (overrides Telegram's borrowed accent) ===== */
+    :root {
+      --accent: #e6a700;        /* gold fill */
+      --accent-ink: #241a00;    /* dark text ON gold — 8:1, never white */
+      --accent-deep: #b07d00;   /* gold for icons / marks / large text */
+      --ok: #10b981;            /* mastered / done (semantic, not brand) */
+      --mark: color-mix(in srgb, #e6a700 40%, transparent);
+    }
+    /* gold TEXT uses the deeper shade (readable on light); gold FILLS stay bright */
+    .text-accent { color: var(--accent-deep); }
+    /* signature: the highlighter swipe — one bold thing per screen, quiet elsewhere */
+    .hl { background: linear-gradient(180deg, transparent 56%, var(--mark) 56%, var(--mark) 92%, transparent 92%); padding: 0 .06em; border-radius: 2px; }
+    .sect-mark { position: relative; display: inline-block; }
+    .sect-mark::after { content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 7px; background: var(--mark); border-radius: 4px; z-index: -1; transform: rotate(-.7deg); }
+    /* active tab = highlighter underline (setTab toggles .text-accent) */
+    .js-tab { position: relative; }
+    .js-tab.text-accent::before { content: ""; position: absolute; top: 0; left: 26%; right: 26%; height: 3px; border-radius: 0 0 4px 4px; background: var(--accent); }
+    /* dashboard "report" */
+    .dh-hero { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
+    .dh-streak { font-size: 52px; font-weight: 800; letter-spacing: -.04em; line-height: .9; position: relative; display: inline-block; font-variant-numeric: tabular-nums; }
+    .dh-streak .swipe { position: absolute; left: -5px; right: -5px; bottom: 6px; height: 15px; background: var(--mark); border-radius: 6px; transform: rotate(-1.6deg); z-index: -1; }
+    .dh-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .dh-mini > div { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+    .dh-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+    .dh-trend { display: flex; align-items: flex-end; gap: 3px; height: 72px; padding-top: 8px; }
+    .dh-trend .b { flex: 1; background: color-mix(in srgb, var(--accent) 60%, transparent); border-radius: 3px 3px 2px 2px; min-height: 3px; }
+    .dh-trend .b.now { background: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent); }
+    .dh-cal { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+    .dh-cal i { aspect-ratio: 1; border-radius: 4px; background: var(--line); }
+    .dh-cal i.done { background: var(--ok); }
+    .dh-cal i.part { background: var(--accent); }
+    .dh-rev { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); }
+    .dh-rev.first { border-top: 0; }
+    .dh-miss { font-size: 12px; font-weight: 700; color: #e5484d; background: color-mix(in srgb, #e5484d 12%, transparent); padding: 3px 9px; border-radius: 999px; }
+    .tnum { font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -350,7 +386,7 @@
     // ---- settings (Telegram initData-authenticated) ------------------------
     const WD = ["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"];
     const chipCls = (on) => "rounded-full px-3 py-2 text-xs " +
-      (on ? "bg-accent text-white" : "bg-card border border-line text-muted");
+      (on ? "bg-accent text-accent-ink" : "bg-card border border-line text-muted");
 
     async function apiProfile(method, body) {
       const res = await fetch("/webapp/api/profile/", {
@@ -391,7 +427,7 @@
         ${row("Ingliz ovozi", voiceSelect("js-envoice", s.en_voices, s.en_voice))}
         ${row("O'zbek ovozi", voiceSelect("js-uzvoice", s.uz_voices, s.uz_voice))}
         ${row("Bildirishnomalar", toggle("js-nudge", s.nudges_enabled))}
-        <button id="js-save" class="w-full rounded-xl bg-accent text-white py-2 font-semibold">💾 Saqlash</button>
+        <button id="js-save" class="w-full rounded-xl bg-accent text-accent-ink py-2.5 font-semibold">💾 Saqlash</button>
       </div>`;
     }
 
@@ -507,44 +543,46 @@
     }
 
     // ---- dashboard (stats + inline-SVG charts) -----------------------------
-    function _bar(trend) {
-      if (!trend.length) return `<p class="text-xs text-muted">Hali imtihon yo'q.</p>`;
-      const w = 300, h = 64, n = trend.length, gap = 2;
-      const bw = Math.max(3, (w - gap * (n - 1)) / n);
-      const bars = trend.map((t, i) => {
-        const pct = t.total ? t.correct / t.total : 0;
-        const bh = Math.max(2, Math.round(pct * (h - 4)));
-        const x = i * (bw + gap);
-        return `<rect x="${x.toFixed(1)}" y="${h - bh}" width="${bw.toFixed(1)}" height="${bh}" rx="1.5" fill="#10b981"><title>${t.date}: ${t.correct}/${t.total}</title></rect>`;
-      }).join("");
-      return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:64px" preserveAspectRatio="none" role="img" aria-label="Kunlik imtihon aniqligi trendi">${bars}</svg>`;
-    }
-    const _dashColor = (s) => s === "completed" ? "#10b981" : s === "none" ? "var(--line)" : "#f59e0b";
-    function _grid(activity) {
-      const cells = activity.map((a) =>
-        `<div class="aspect-square rounded-sm" style="background:${_dashColor(a.status)}" title="${a.date} · ${a.status}"></div>`).join("");
-      const chip = (c, l) => `<span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:${c}"></span>${l}</span>`;
-      const legend = `<div class="flex gap-3 text-[10px] text-muted mt-2">${chip("#10b981", "bajarilgan")}${chip("#f59e0b", "qisman")}${chip("var(--line)", "yo'q")}</div>`;
-      return `<div class="grid grid-cols-10 gap-1">${cells}</div>${legend}`;
-    }
     function dashboardHTML(d) {
-      const tile = (v, l) => `<div class="rounded-2xl bg-card border border-line py-4 text-center"><div class="text-2xl font-bold">${v}</div><div class="text-[11px] text-muted">${l}</div></div>`;
-      const card = (title, inner) => `<div class="rounded-2xl bg-card border border-line p-4"><div class="text-sm font-semibold mb-2">${title}</div>${inner}</div>`;
+      const mini = (v, u, l) => `<div><div class="text-[22px] font-extrabold tracking-tight tnum">${v}<span class="text-[13px] text-muted font-semibold">${u || ""}</span></div><div class="text-[11px] text-muted mt-0.5">${l}</div></div>`;
+      const card = (title, inner) => `<div class="dh-card"><h3 class="text-[14px] font-bold mb-2.5"><span class="sect-mark">${title}</span></h3>${inner}</div>`;
+      // accuracy trend — single-hue bars, height = daily accuracy, last day emphasized
+      const trend = d.trend.length
+        ? `<div class="dh-trend" role="img" aria-label="Kunlik imtihon aniqligi trendi">` +
+            d.trend.map((t, i) => {
+              const pct = t.total ? Math.round((t.correct / t.total) * 100) : 0;
+              const now = i === d.trend.length - 1 ? " now" : "";
+              return `<div class="b${now}" style="height:${Math.max(6, pct)}%" title="${t.date}: ${t.correct}/${t.total}"></div>`;
+            }).join("") +
+          `</div><div class="flex justify-between text-[10px] text-muted mt-1.5"><span>oldinroq</span><span>bugun</span></div>`
+        : `<p class="text-xs text-muted">Hali imtihon topshirilmagan.</p>`;
+      // 30-day activity heatmap + legend
+      const cells = d.activity.map((a) => {
+        const c = a.status === "completed" ? " done" : a.status === "none" ? "" : " part";
+        return `<i class="${c.trim()}" title="${a.date} · ${a.status}"></i>`;
+      }).join("");
+      const chip = (bg, l) => `<span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:${bg}"></span>${l}</span>`;
+      const legend = `<div class="flex gap-3 text-[10px] text-muted mt-2.5 flex-wrap">${chip("var(--ok)", "bajarilgan")}${chip("var(--accent)", "qisman")}${chip("var(--line)", "yo'q")}</div>`;
       const errs = d.error_words.length
-        ? d.error_words.map((e) => `<div class="flex justify-between text-[13px] py-0.5"><span><b class="text-emerald-400">${esc(e.en)}</b> — ${esc(e.uz)}</span><span class="text-rose-400">${e.wrong}×</span></div>`).join("")
-        : `<p class="text-xs text-muted">Xato so'z yo'q 🎉</p>`;
+        ? d.error_words.map((e, i) => `<div class="dh-rev${i === 0 ? " first" : ""}"><div class="text-[15px] font-bold">${esc(e.en)}<span class="text-muted font-medium text-[13px] ml-2">${esc(e.uz)}</span></div><span class="dh-miss tnum">${e.wrong}×</span></div>`).join("")
+        : `<p class="text-xs text-muted">Xato so'z yo'q — zo'r! 🎉</p>`;
       return `
-        <div class="grid grid-cols-3 gap-3">
-          ${tile("🔥 " + d.streak, "streak")}${tile(d.accuracy.pct + "%", "aniqlik")}${tile(d.learned, "yodlandi")}
+        <div class="dh-hero">
+          <div class="flex items-end justify-between gap-3">
+            <div><div class="dh-streak">${d.streak}<span class="swipe"></span></div><div class="text-[13px] text-muted mt-1.5">kunlik seriya — davom eting</div></div>
+            <div class="text-3xl leading-none">🔥</div>
+          </div>
+          <div class="dh-mini">${mini(d.accuracy.pct, "%", "imtihon aniqligi")}${mini(d.learned, " / " + d.total, "yodlangan so'z")}</div>
         </div>
-        ${card("📈 Aniqlik trendi", _bar(d.trend))}
-        ${card("🗓 Faollik (30 kun)", _grid(d.activity) + `<div class="text-[11px] text-muted mt-2">Bajarilmagan kunlar: <b>${d.missed_days.count}</b></div>`)}
-        ${card("❌ Ko'p xato so'zlar", errs)}`;
+        ${card("Aniqlik trendi", trend)}
+        ${card("Faollik — 30 kun", `<div class="dh-cal">${cells}</div>${legend}<div class="text-[11px] text-muted mt-2.5">Bajarilmagan kunlar: <b class="text-ink">${d.missed_days.count}</b></div>`)}
+        ${card("Takrorlash kerak", errs)}`;
     }
     async function loadDashboard(boxId, url) {
       const box = document.getElementById(boxId);
-      if (!box || !initData) return;
-      try { box.innerHTML = dashboardHTML(await getJSON(url)); } catch (e) { /* leave empty */ }
+      if (!box) return;
+      if (!initData) { box.innerHTML = `<p class="text-center text-xs text-muted py-8">Statistika Telegram ilovasi ichida ko'rinadi.</p>`; return; }
+      try { box.innerHTML = dashboardHTML(await getJSON(url)); } catch (e) { box.innerHTML = ""; }
     }
     async function showWardDashboard(id, name) {
       setHeader(name, "Dashboard"); setBack(() => showProfile());
@@ -553,25 +591,10 @@
     }
 
     async function showProfile() {
-      loading(); setHeader("Profil", "Sizning progressingiz"); setBack(null);
-      const list = await books();
-      const total = list.reduce((s, b) => s + b.word_count, 0) || 1;
-      const done = learned.size;
-      const pct = Math.round((done / total) * 100);
-      setContent("px-4 py-6 pb-24 space-y-5",
-        `<div class="rounded-2xl bg-card border border-line p-5 text-center">
-           <div class="text-5xl font-black tracking-tight text-accent">${done}</div>
-           <div class="text-sm text-muted mt-1">o'rganilgan so'z / ${total}</div>
-           <div class="mt-4 h-2.5 rounded-full bg-line overflow-hidden"><div class="h-full bg-accent" style="width:${pct}%"></div></div>
-           <div class="text-xs text-muted mt-2">${pct}% yakunlandi</div>
-         </div>
-         <div class="grid grid-cols-3 gap-3 text-center">
-           <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${list.length}</div><div class="text-[11px] text-muted">kitob</div></div>
-           <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${total}</div><div class="text-[11px] text-muted">so'z</div></div>
-           <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${done}</div><div class="text-[11px] text-muted">o'rgandim</div></div>
-         </div>
-         <div id="dash" class="space-y-3"></div>
-         <div id="settings"><p class="text-center text-xs text-muted">Yuklanmoqda…</p></div>
+      setHeader("Profil", "Statistika va sozlamalar"); setBack(null);
+      setContent("px-4 py-5 pb-24 space-y-4",
+        `<div id="dash" class="space-y-3"><p class="text-center text-xs text-muted py-8">Yuklanmoqda…</p></div>
+         <div id="settings"></div>
          <div id="wards"></div>`);
       loadDashboard("dash", "api/dashboard/");
       loadSettings();
