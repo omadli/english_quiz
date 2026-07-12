@@ -14,6 +14,8 @@ from apps.accounts.models import TelegramAccount
 from apps.catalog.models import Book, Unit, Word
 from apps.common.tts import EN_VOICES, UZ_VOICES
 from apps.learning.models import DailySession, LearnedWord, LearningProfile
+from apps.relations.services.guardian import ward_profile
+from apps.relations.services.reports import guardian_wards
 
 
 def _word_payload(w: Word, with_context: bool = False) -> dict:
@@ -216,6 +218,40 @@ def api_today(request):
         "date": today.isoformat(),
         "words": [_word_payload(w, with_context=True) for w in words],
     })
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_wards(request):
+    """The caller's active wards (guardian view)."""
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    wards = guardian_wards(profile.user)
+    return JsonResponse(
+        {"wards": [{"id": w.id, "name": w.full_name or str(w.pk)} for w in wards]}
+    )
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_ward_settings(request, learner_id: int):
+    """GET/POST one ward's settings — only for the ward's active guardian."""
+    caller = _profile_from_request(request)
+    if caller is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    profile = ward_profile(caller.user, learner_id)
+    if profile is None:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    if request.method == "POST":
+        try:
+            payload = json.loads(request.body or b"{}")
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({"error": "bad json"}, status=400)
+        updates = _clean_settings(payload if isinstance(payload, dict) else {})
+        if updates:
+            for key, value in updates.items():
+                setattr(profile, key, value)
+            profile.save(update_fields=[*updates.keys(), "updated_at"])
+    return JsonResponse(_profile_payload(profile))
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie

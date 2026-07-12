@@ -24,6 +24,9 @@ urlpatterns = [
     path("webapp/api/profile/", catalog_views.api_profile, name="webapp_profile"),
     path("webapp/api/learned/", catalog_views.api_learned, name="webapp_learned"),
     path("webapp/api/today/", catalog_views.api_today, name="webapp_today"),
+    path("webapp/api/wards/", catalog_views.api_wards, name="webapp_wards"),
+    path("webapp/api/ward/<int:learner_id>/settings/", catalog_views.api_ward_settings,
+         name="webapp_ward_settings"),
 ]
 
 if settings.DEBUG:

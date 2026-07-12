@@ -11,6 +11,7 @@ from asgiref.sync import sync_to_async
 from apps.accounts.models import User
 from apps.learning.models import LearningProfile, default_weekdays
 from apps.quiz.services.quiz_code import load_quiz
+from apps.relations.models import Guardianship
 from apps.relations.services.referral import redeem_token
 from bot import strings
 from bot.handlers.group_quiz import seed_group_quiz_from_config
@@ -30,6 +31,28 @@ DEFAULTS = {
     "audio_enabled": True,
     "audio_repeat": 2,
 }
+
+
+def _guardian_notify_info(guardianship) -> tuple[int, str] | None:
+    """(telegram_id, role label) for the guardian, or None if they have no bot account."""
+    account = getattr(guardianship.guardian, "telegram", None)
+    if account is None:
+        return None
+    role = "ota-ona" if guardianship.role == Guardianship.Role.PARENT else "o'qituvchi"
+    return account.telegram_id, role
+
+
+async def _notify_guardian(bot, guardianship, learner) -> None:
+    info = await sync_to_async(_guardian_notify_info)(guardianship)
+    if info is None:
+        return
+    tg_id, role = info
+    try:
+        await bot.send_message(
+            tg_id, strings.WARD_JOINED.format(name=learner.full_name or learner.pk, role=role)
+        )
+    except Exception:  # best-effort — the guardian may have blocked the bot
+        pass
 
 
 @router.message(CommandStart())
@@ -59,6 +82,7 @@ async def cmd_start(
         guardianship = await sync_to_async(redeem_token)(payload[1:], user)
         if guardianship is not None:
             await message.answer(strings.LINKED_OK)
+            await _notify_guardian(message.bot, guardianship, user)
     if profile.onboarded:
         await message.answer(strings.WELCOME_BACK, reply_markup=menu_keyboard())
         return
