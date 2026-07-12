@@ -368,6 +368,9 @@
       const opt = (v, sel) => `<option value="${v}" ${v === sel ? "selected" : ""}>${v}</option>`;
       const select = (id, vals, cur) =>
         `<select id="${id}" class="bg-card border border-line rounded-xl px-3 py-2 text-sm">${vals.map((v) => opt(v, cur)).join("")}</select>`;
+      const voiceOpt = (p, cur) => `<option value="${p[0]}" ${p[0] === cur ? "selected" : ""}>${p[1]}</option>`;
+      const voiceSelect = (id, voices, cur) =>
+        `<select id="${id}" class="bg-card border border-line rounded-xl px-3 py-2 text-sm">${(voices || []).map((p) => voiceOpt(p, cur)).join("")}</select>`;
       const time = (id, val) =>
         `<input id="${id}" type="time" value="${val}" class="bg-card border border-line rounded-xl px-3 py-2 text-sm">`;
       const toggle = (id, on) =>
@@ -385,6 +388,8 @@
         ${row("Imtihon vaqti", time("js-exam", s.exam_time))}
         ${row("Audio", toggle("js-audio", s.audio_enabled))}
         ${row("Audio takror", select("js-rep", [1, 2, 3], s.audio_repeat))}
+        ${row("Ingliz ovozi", voiceSelect("js-envoice", s.en_voices, s.en_voice))}
+        ${row("O'zbek ovozi", voiceSelect("js-uzvoice", s.uz_voices, s.uz_voice))}
         ${row("Bildirishnomalar", toggle("js-nudge", s.nudges_enabled))}
         <button id="js-save" class="w-full rounded-xl bg-accent text-white py-2 font-semibold">💾 Saqlash</button>
       </div>`;
@@ -415,6 +420,8 @@
             exam_time: document.getElementById("js-exam").value,
             audio_enabled: document.getElementById("js-audio").dataset.on === "1",
             audio_repeat: Number(document.getElementById("js-rep").value),
+            en_voice: document.getElementById("js-envoice").value,
+            uz_voice: document.getElementById("js-uzvoice").value,
             nudges_enabled: document.getElementById("js-nudge").dataset.on === "1",
           });
           if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
@@ -801,7 +808,8 @@
     }
     document.querySelectorAll(".js-tab").forEach((el) => el.addEventListener("click", () => setTab(el.dataset.tab)));
 
-    loadLearned(() => setTab("books"));
+    const _view = new URLSearchParams(location.search).get("view");
+    loadLearned(() => setTab(_view === "today" ? "today" : "books"));
   </script>
 </body>
 </html>
