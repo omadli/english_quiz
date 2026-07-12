@@ -17,7 +17,7 @@ def _learner(nudges=True):
     return u
 
 
-@patch("apps.learning.services.report.send_daily")
+@patch("apps.learning.services.report.send_text")
 @patch("apps.learning.services.report.compute_streak", return_value=7)
 def test_finalize_sends_streak_celebration_on_milestone(mock_streak, mock_send):
     u = _learner()
@@ -28,7 +28,7 @@ def test_finalize_sends_streak_celebration_on_milestone(mock_streak, mock_send):
     assert mock_send.call_count == 2
 
 
-@patch("apps.learning.services.report.send_daily")
+@patch("apps.learning.services.report.send_text")
 @patch("apps.learning.services.report.compute_streak", return_value=8)
 def test_finalize_no_celebration_when_not_milestone(mock_streak, mock_send):
     u = _learner()
@@ -38,7 +38,7 @@ def test_finalize_no_celebration_when_not_milestone(mock_streak, mock_send):
     assert mock_send.call_count == 1  # report only
 
 
-@patch("apps.learning.services.report.send_daily")
+@patch("apps.learning.services.report.send_text")
 @patch("apps.learning.services.report.compute_streak", return_value=7)
 def test_finalize_no_celebration_when_nudges_disabled(mock_streak, mock_send):
     u = _learner(nudges=False)

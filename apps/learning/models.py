@@ -22,6 +22,8 @@ class LearningProfile(TimeStampedModel):
     exam_time = models.TimeField(default=datetime.time(20, 0))
     audio_enabled = models.BooleanField(default=True)
     audio_repeat = models.PositiveSmallIntegerField(default=2)
+    en_voice = models.CharField(max_length=40, default="en-US-AriaNeural")
+    uz_voice = models.CharField(max_length=40, default="uz-UZ-MadinaNeural")
     timezone = models.CharField(max_length=40, default="Asia/Tashkent")
     language = models.CharField(max_length=8, default="uz")
     onboarded = models.BooleanField(default=False)

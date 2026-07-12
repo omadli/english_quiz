@@ -19,7 +19,7 @@ from apps.learning.services.nudges import (
 from apps.learning.services.report import finalize_exam
 from apps.learning.services.scheduling import is_due_for_delivery, is_due_for_exam
 from bot import strings
-from bot.sender import send_daily, send_quiz_poll
+from bot.sender import send_quiz_poll, send_text
 
 
 @shared_task
@@ -61,7 +61,7 @@ def finalize_due_exams() -> None:
 
 
 def _send_text(telegram_id: int, text: str) -> None:
-    send_daily(telegram_id, None, [{"caption": text, "image": None, "audio": None}])
+    send_text(telegram_id, text)
 
 
 @shared_task

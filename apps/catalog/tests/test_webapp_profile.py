@@ -117,6 +117,24 @@ def test_profile_post_drops_invalid_values(client, settings):
     assert p.study_weekdays == [0, 1]                # invalid days filtered out
 
 
+def test_profile_returns_voices_and_updates(client, settings):
+    settings.BOT_TOKEN = TOKEN
+    user = _user(555)
+    auth = _init_data({"id": 555, "first_name": "Ali"})
+    got = client.get("/webapp/api/profile/", HTTP_X_TELEGRAM_INIT_DATA=auth).json()
+    assert got["en_voice"] == "en-US-AriaNeural"
+    assert any(v[0] == "uz-UZ-SardorNeural" for v in got["uz_voices"])  # catalog exposed
+    # POST: valid voice sticks, invalid one is dropped
+    client.post(
+        "/webapp/api/profile/",
+        data=json.dumps({"en_voice": "en-US-GuyNeural", "uz_voice": "bogus"}),
+        content_type="application/json", HTTP_X_TELEGRAM_INIT_DATA=auth,
+    )
+    p = LearningProfile.objects.get(user=user)
+    assert p.en_voice == "en-US-GuyNeural"
+    assert p.uz_voice == "uz-UZ-MadinaNeural"  # bogus rejected, default kept
+
+
 def _word() -> Word:
     book = Book.objects.create(number=1, title="B1", slug="b1")
     unit = Unit.objects.create(book=book, number=1)

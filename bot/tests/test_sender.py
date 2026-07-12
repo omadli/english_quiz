@@ -7,22 +7,31 @@ from bot import sender
 pytestmark = pytest.mark.asyncio
 
 
-async def test_send_daily_sends_card_then_items():
+async def test_send_daily_audio_with_caption_and_button():
     bot = AsyncMock()
-    items = [
-        {"caption": "afraid — qo'rqib", "image": b"IMG", "audio": b"AUD"},
-        {"caption": "agree — rozi", "image": None, "audio": None},
-    ]
-    await sender._send_daily(bot, 555, b"CARD", items)
-
-    # 1 card photo + 1 word photo (item 1) = 2 send_photo; item 2 has no image → send_message
-    assert bot.send_photo.await_count == 2
-    assert bot.send_message.await_count == 1
-    assert bot.send_audio.await_count == 1  # only item 1 has audio
+    await sender._send_daily(bot, 555, "caption list", b"AUD", "https://x/webapp/?view=today")
+    bot.send_audio.assert_awaited_once()
+    kwargs = bot.send_audio.await_args.kwargs
+    assert kwargs["caption"] == "caption list"
+    assert kwargs["reply_markup"] is not None  # 📖 Batafsil button
+    bot.send_message.assert_not_awaited()
 
 
-async def test_send_daily_no_card():
+async def test_send_daily_no_audio_sends_message():
     bot = AsyncMock()
-    await sender._send_daily(bot, 555, None, [{"caption": "x", "image": None, "audio": None}])
-    assert bot.send_photo.await_count == 0
-    assert bot.send_message.await_count == 1
+    await sender._send_daily(bot, 555, "caption", None, None)
+    bot.send_message.assert_awaited_once()
+    bot.send_audio.assert_not_awaited()
+
+
+async def test_send_daily_long_caption_splits_message_and_audio():
+    bot = AsyncMock()
+    await sender._send_daily(bot, 555, "x" * 1100, b"AUD", None)
+    bot.send_message.assert_awaited_once()  # list as its own message
+    bot.send_audio.assert_awaited_once()    # audio with a short caption
+
+
+async def test_send_daily_no_button_when_no_url():
+    bot = AsyncMock()
+    await sender._send_daily(bot, 555, "caption", b"AUD", None)
+    assert bot.send_audio.await_args.kwargs["reply_markup"] is None

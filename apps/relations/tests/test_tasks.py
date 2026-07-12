@@ -9,7 +9,7 @@ from apps.relations.tasks import dispatch_guardian_reports
 pytestmark = pytest.mark.django_db
 
 
-@patch("apps.relations.tasks.send_daily")
+@patch("apps.relations.tasks.send_text")
 @patch("apps.relations.tasks.build_learner_report", return_value="RPT")
 def test_dispatch_sends_one_report_per_active_ward(mock_build, mock_send):
     guardian = User.objects.create(first_name="G")

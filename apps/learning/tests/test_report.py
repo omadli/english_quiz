@@ -39,7 +39,7 @@ def test_build_report_shows_score_and_wrong_words():
 def test_finalize_exam_marks_completed_and_sends():
     from unittest.mock import patch
     user, session = _session_with_answers()
-    with patch("apps.learning.services.report.send_daily") as mock_send:
+    with patch("apps.learning.services.report.send_text") as mock_send:
         report_mod.finalize_exam(session)
     session.refresh_from_db()
     assert session.status == DailySession.Status.COMPLETED
@@ -51,7 +51,7 @@ def test_finalize_exam_marks_completed_and_sends():
 def test_finalize_exam_survives_forbidden_and_marks_blocked():
     user, session = _session_with_answers()
     with patch(
-        "apps.learning.services.report.send_daily",
+        "apps.learning.services.report.send_text",
         side_effect=TelegramForbiddenError(method=MagicMock(), message="bot blocked"),
     ):
         report_mod.finalize_exam(session)

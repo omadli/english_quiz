@@ -14,16 +14,16 @@ pytestmark = pytest.mark.asyncio
 
 
 @patch("bot.handlers.daily._send_daily", new_callable=AsyncMock)
-@patch("bot.handlers.daily.today_session_items")
-async def test_menu_today_sends_session(mock_items, mock_send):
-    mock_items.return_value = (b"card", [{"caption": "c", "image": None, "audio": None}])
+@patch("bot.handlers.daily.today_session_payload")
+async def test_menu_today_sends_session(mock_payload, mock_send):
+    mock_payload.return_value = ("caption list", b"AUD")
     message = AsyncMock()
     message.chat.id = 555
     await daily.menu_today(message, user=MagicMock(id=1))
     mock_send.assert_awaited_once()
 
 
-@patch("bot.handlers.daily.today_session_items", return_value=None)
+@patch("bot.handlers.daily.today_session_payload", return_value=None)
 async def test_menu_today_no_session_says_none(mock_items):
     message = AsyncMock()
     await daily.menu_today(message, user=MagicMock(id=1))

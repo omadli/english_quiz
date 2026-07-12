@@ -27,38 +27,36 @@ def user_with_words():
 
 
 @patch("apps.learning.services.deliver.send_daily")
-@patch("apps.learning.services.deliver.build_word_audio", return_value=b"AUD")
-@patch("apps.learning.services.deliver.render_daily_card", return_value=b"CARD")
-def test_run_delivery_creates_session_and_advances(
-    mock_card, mock_audio, mock_send, user_with_words
-):
+@patch("apps.learning.services.deliver.build_daily_audio", return_value=b"AUD")
+def test_run_delivery_sends_one_audio_and_caption(mock_audio, mock_send, user_with_words):
     user, book, unit = user_with_words
     session = deliver_mod.run_delivery(user.id)
-    assert session is not None
     assert session.status == DailySession.Status.DELIVERED
     assert list(session.words.values_list("en", flat=True)) == ["w1", "w2", "w3"]
     assert WordProgress.objects.filter(user=user).count() == 3
+    mock_audio.assert_called_once()  # ONE combined audio, not one-per-word
+    mock_send.assert_called_once()
+    _chat, caption, audio, _webapp = mock_send.call_args.args
+    assert audio == b"AUD"
+    assert "w1" in caption and "w2" in caption and "w3" in caption  # list caption
     user.learning_profile.refresh_from_db()
     assert user.learning_profile.current_word_order == 3  # advanced to last delivered
-    mock_send.assert_called_once()
 
 
 @patch("apps.learning.services.deliver.send_daily")
-@patch("apps.learning.services.deliver.build_word_audio", return_value=b"AUD")
-@patch("apps.learning.services.deliver.render_daily_card", return_value=b"CARD")
-def test_run_delivery_is_idempotent(mock_card, mock_audio, mock_send, user_with_words):
-    user, book, unit = user_with_words
+@patch("apps.learning.services.deliver.build_daily_audio", return_value=b"AUD")
+def test_run_delivery_idempotent(mock_audio, mock_send, user_with_words):
+    user, *_ = user_with_words
     deliver_mod.run_delivery(user.id)
     mock_send.reset_mock()
-    again = deliver_mod.run_delivery(user.id)  # same day → already delivered
-    assert again is None
+    assert deliver_mod.run_delivery(user.id) is None
     mock_send.assert_not_called()
     assert DailySession.objects.filter(user=user).count() == 1
 
 
 @patch("apps.learning.services.deliver.send_daily")
-def test_run_delivery_no_content_sends_nothing(mock_send, user_with_words):
-    user, book, unit = user_with_words
+def test_run_delivery_no_content(mock_send, user_with_words):
+    user, *_ = user_with_words
     p = user.learning_profile
     p.current_word_order = 5  # past the last word
     p.save()
@@ -66,28 +64,14 @@ def test_run_delivery_no_content_sends_nothing(mock_send, user_with_words):
     mock_send.assert_not_called()
 
 
-@patch(
-    "apps.learning.services.deliver.send_daily",
-    side_effect=TelegramForbiddenError(method=MagicMock(), message="bot was blocked by the user"),
-)
-@patch("apps.learning.services.deliver.build_word_audio", return_value=b"AUD")
-@patch("apps.learning.services.deliver.render_daily_card", return_value=b"CARD")
-def test_run_delivery_sets_blocked_bot_on_forbidden(
-    mock_card, mock_audio, mock_send, user_with_words
-):
-    user, book, unit = user_with_words
-    result = deliver_mod.run_delivery(user.id)
-    assert result is None
-
+@patch("apps.learning.services.deliver.send_daily",
+       side_effect=TelegramForbiddenError(method=MagicMock(), message="blocked"))
+@patch("apps.learning.services.deliver.build_daily_audio", return_value=b"AUD")
+def test_run_delivery_blocked(mock_audio, mock_send, user_with_words):
+    user, *_ = user_with_words
+    assert deliver_mod.run_delivery(user.id) is None
     user.telegram.refresh_from_db()
     assert user.telegram.blocked_bot is True
-
     user.learning_profile.refresh_from_db()
     assert user.learning_profile.current_word_order == 0
-
-    assert not DailySession.objects.filter(
-        user=user, status=DailySession.Status.DELIVERED
-    ).exists()
-    assert DailySession.objects.filter(
-        user=user, status=DailySession.Status.PENDING
-    ).exists()
+    assert DailySession.objects.filter(user=user, status=DailySession.Status.PENDING).exists()

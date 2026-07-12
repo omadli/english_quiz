@@ -6,7 +6,7 @@ from django.utils import timezone
 from apps.learning.models import DailySession, ExamQuestion
 from apps.learning.services.nudges import streak_milestone_message
 from apps.relations.services.reports import compute_streak
-from bot.sender import send_daily
+from bot.sender import send_text
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +42,7 @@ def finalize_exam(session: DailySession) -> None:
     if account is None or account.blocked_bot:
         return
     try:
-        send_daily(
-            account.telegram_id,
-            None,
-            [{"caption": build_report(session), "image": None, "audio": None}],
-        )
+        send_text(account.telegram_id, build_report(session))
     except TelegramForbiddenError:
         account.blocked_bot = True
         account.save(update_fields=["blocked_bot", "updated_at"])
@@ -58,7 +54,6 @@ def finalize_exam(session: DailySession) -> None:
         message = streak_milestone_message(compute_streak(session.user))
         if message:
             try:
-                send_daily(account.telegram_id, None,
-                           [{"caption": message, "image": None, "audio": None}])
+                send_text(account.telegram_id, message)
             except Exception as exc:  # best-effort celebration
                 logger.warning("failed to send streak celebration for %s: %s", session.id, exc)

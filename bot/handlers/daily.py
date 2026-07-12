@@ -3,7 +3,11 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
 from apps.accounts.models import User
-from apps.learning.services.deliver import today_session_items, today_session_words
+from apps.learning.services.deliver import (
+    _webapp_today_url,
+    today_session_payload,
+    today_session_words,
+)
 from apps.learning.services.exam import build_questions
 from bot import strings
 from bot.handlers.quiz_practice import _countdown_then_run
@@ -16,9 +20,9 @@ _EXAM_TIMER = 30
 
 @router.message(F.text == strings.MENU_TODAY)
 async def menu_today(message: Message, user: User) -> None:
-    """Re-send today's morning task (card + per-word image/caption/audio) on demand."""
+    """Re-send today's morning task (word list + one combined audio) on demand."""
     note = await message.answer(strings.TODAY_PREPARING)
-    result = await sync_to_async(today_session_items)(user.id)
+    result = await sync_to_async(today_session_payload)(user.id)
     try:
         await note.delete()
     except Exception:
@@ -26,8 +30,8 @@ async def menu_today(message: Message, user: User) -> None:
     if result is None:
         await message.answer(strings.TODAY_NONE)
         return
-    card, items = result
-    await _send_daily(message.bot, message.chat.id, card, items)
+    caption, audio = result
+    await _send_daily(message.bot, message.chat.id, caption, audio, _webapp_today_url())
 
 
 @router.message(F.text == strings.MENU_EXAM)

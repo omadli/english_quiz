@@ -17,7 +17,7 @@ def _learner(tid, nudges=True):
     return u
 
 
-@patch("apps.learning.tasks.send_daily")
+@patch("apps.learning.tasks.send_text")
 def test_dispatch_study_nudges_sends_and_marks(mock_send):
     u = _learner(101)
     s = DailySession.objects.create(user=u, date=timezone.localdate(),

@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from apps.relations.models import Guardianship
 from apps.relations.services.reports import build_learner_report
-from bot.sender import send_daily
+from bot.sender import send_text
 
 
 @shared_task
@@ -17,4 +17,4 @@ def dispatch_guardian_reports() -> None:
         if account is None or account.blocked_bot:
             continue
         text = build_learner_report(link.learner, date)
-        send_daily(account.telegram_id, None, [{"caption": text, "image": None, "audio": None}])
+        send_text(account.telegram_id, text)

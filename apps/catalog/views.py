@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.accounts.models import TelegramAccount
 from apps.catalog.models import Book, Unit, Word
+from apps.common.tts import EN_VOICES, UZ_VOICES
 from apps.learning.models import DailySession, LearnedWord, LearningProfile
 
 
@@ -124,6 +125,10 @@ def _profile_payload(profile: LearningProfile) -> dict:
         "audio_enabled": profile.audio_enabled,
         "audio_repeat": profile.audio_repeat,
         "nudges_enabled": profile.nudges_enabled,
+        "en_voice": profile.en_voice,
+        "uz_voice": profile.uz_voice,
+        "en_voices": EN_VOICES,
+        "uz_voices": UZ_VOICES,
         "learned_words": LearnedWord.objects.filter(user=profile.user).count(),
     }
 
@@ -165,6 +170,10 @@ def _clean_settings(payload: dict) -> dict:
     for key in ("audio_enabled", "nudges_enabled"):
         if key in payload:
             updates[key] = bool(payload[key])
+    if payload.get("en_voice") in {v[0] for v in EN_VOICES}:
+        updates["en_voice"] = payload["en_voice"]
+    if payload.get("uz_voice") in {v[0] for v in UZ_VOICES}:
+        updates["uz_voice"] = payload["uz_voice"]
     return updates
 
 
