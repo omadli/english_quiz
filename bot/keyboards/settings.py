@@ -4,28 +4,26 @@ from apps.common.tts import EN_VOICES, UZ_VOICES, voice_label
 from bot import strings
 
 
+def _btn(text: str, cb: str) -> InlineKeyboardButton:
+    return InlineKeyboardButton(text=text, callback_data=cb)
+
+
 def settings_keyboard(profile) -> InlineKeyboardMarkup:
     """Inline settings — each button shows its current value for at-a-glance clarity."""
-    audio = strings.BTN_AUDIO_ON if profile.audio_enabled else strings.BTN_AUDIO_OFF
-    nudges = strings.BTN_NUDGES_ON if profile.nudges_enabled else strings.BTN_NUDGES_OFF
-    days = ", ".join(strings.WEEKDAY_SHORT[d] for d in profile.study_weekdays)
+    s = strings
+    audio = s.BTN_AUDIO_ON if profile.audio_enabled else s.BTN_AUDIO_OFF
+    nudges = s.BTN_NUDGES_ON if profile.nudges_enabled else s.BTN_NUDGES_OFF
+    days = ", ".join(s.WEEKDAY_SHORT[d] for d in profile.study_weekdays)
     rows = [
-        [InlineKeyboardButton(text=f"🔤 {strings.SETTINGS_WORDS}: {profile.words_per_session}",
-                              callback_data="set:words")],
-        [InlineKeyboardButton(text=f"📅 {strings.SETTINGS_DAYS}: {days}", callback_data="set:days")],
-        [InlineKeyboardButton(text=f"🌅 {strings.SETTINGS_MORNING}: {profile.morning_time:%H:%M}",
-                              callback_data="set:morning"),
-         InlineKeyboardButton(text=f"🎯 {strings.SETTINGS_EXAM}: {profile.exam_time:%H:%M}",
-                              callback_data="set:exam")],
-        [InlineKeyboardButton(text=f"🔊 {strings.SETTINGS_AUDIO}: {audio}", callback_data="set:audio")],
-        [InlineKeyboardButton(text=f"🇬🇧 {strings.SETTINGS_EN_VOICE}: {voice_label(profile.en_voice)}",
-                              callback_data="set:envoice")],
-        [InlineKeyboardButton(text=f"🇺🇿 {strings.SETTINGS_UZ_VOICE}: {voice_label(profile.uz_voice)}",
-                              callback_data="set:uzvoice")],
-        [InlineKeyboardButton(text=f"🔁 {strings.SETTINGS_REPEAT}: {profile.audio_repeat}",
-                              callback_data="set:repeat")],
-        [InlineKeyboardButton(text=f"🔔 {strings.SETTINGS_NUDGES}: {nudges}",
-                              callback_data="set:nudges")],
+        [_btn(f"🔤 {s.SETTINGS_WORDS}: {profile.words_per_session}", "set:words")],
+        [_btn(f"📅 {s.SETTINGS_DAYS}: {days}", "set:days")],
+        [_btn(f"🌅 {s.SETTINGS_MORNING}: {profile.morning_time:%H:%M}", "set:morning"),
+         _btn(f"🎯 {s.SETTINGS_EXAM}: {profile.exam_time:%H:%M}", "set:exam")],
+        [_btn(f"🔊 {s.SETTINGS_AUDIO}: {audio}", "set:audio")],
+        [_btn(f"🇬🇧 {s.SETTINGS_EN_VOICE}: {voice_label(profile.en_voice)}", "set:envoice")],
+        [_btn(f"🇺🇿 {s.SETTINGS_UZ_VOICE}: {voice_label(profile.uz_voice)}", "set:uzvoice")],
+        [_btn(f"🔁 {s.SETTINGS_REPEAT}: {profile.audio_repeat}", "set:repeat")],
+        [_btn(f"🔔 {s.SETTINGS_NUDGES}: {nudges}", "set:nudges")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
