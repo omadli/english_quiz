@@ -447,6 +447,59 @@
       }
     }
 
+    // ---- Nazorat (guardian): manage each ward's settings --------------------
+    async function apiWards() { return getJSON("api/wards/"); }
+    async function apiWardSettings(id, method, body) {
+      const res = await fetch(`/webapp/api/ward/${id}/settings/`, {
+        method,
+        headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": initData },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) throw new Error(res.status);
+      return res.json();
+    }
+    async function loadWards() {
+      const box = document.getElementById("wards");
+      if (!box || !initData) return;
+      let wards = [];
+      try { wards = (await apiWards()).wards || []; } catch (e) { return; }
+      if (!wards.length) return;  // not a guardian → show nothing
+      box.innerHTML = `<div class="rounded-2xl bg-card border border-line p-5 space-y-2">
+        <div class="text-sm font-semibold">👨‍👩‍👧 Nazorat</div>` +
+        wards.map((w) => `<button data-id="${w.id}" data-name="${esc(w.name)}" class="js-ward w-full text-left rounded-xl bg-line/40 px-3 py-2 text-sm">${esc(w.name)} ⚙️</button>`).join("") +
+        `</div>`;
+      box.querySelectorAll(".js-ward").forEach((el) => el.addEventListener("click", () =>
+        showWardSettings(el.dataset.id, el.dataset.name)));
+    }
+    async function showWardSettings(id, name) {
+      setHeader(name, "O'quvchi sozlamalari"); setBack(() => showProfile());
+      loading();
+      const s = await apiWardSettings(id, "GET");
+      setContent("px-4 py-4 pb-24", `<div id="settings">${settingsHTML(s)}</div>`);
+      bindSettings(s);
+      const btn = document.getElementById("js-save");
+      const clone = btn.cloneNode(true); btn.replaceWith(clone);  // drop the self-POST handler
+      clone.addEventListener("click", async () => {
+        clone.textContent = "Saqlanmoqda…"; clone.disabled = true;
+        try {
+          await apiWardSettings(id, "POST", {
+            study_weekdays: s.study_weekdays,
+            words_per_session: Number(document.getElementById("js-wps").value),
+            morning_time: document.getElementById("js-morning").value,
+            exam_time: document.getElementById("js-exam").value,
+            audio_enabled: document.getElementById("js-audio").dataset.on === "1",
+            audio_repeat: Number(document.getElementById("js-rep").value),
+            en_voice: document.getElementById("js-envoice").value,
+            uz_voice: document.getElementById("js-uzvoice").value,
+            nudges_enabled: document.getElementById("js-nudge").dataset.on === "1",
+          });
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+          clone.textContent = "✅ Saqlandi";
+        } catch (e) { clone.textContent = "❌ Xato"; }
+        setTimeout(() => { clone.textContent = "💾 Saqlash"; clone.disabled = false; }, 1300);
+      });
+    }
+
     async function showProfile() {
       loading(); setHeader("Profil", "Sizning progressingiz"); setBack(null);
       const list = await books();
@@ -465,8 +518,10 @@
            <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${total}</div><div class="text-[11px] text-muted">so'z</div></div>
            <div class="rounded-2xl bg-card border border-line py-4"><div class="text-2xl font-bold">${done}</div><div class="text-[11px] text-muted">o'rgandim</div></div>
          </div>
-         <div id="settings"><p class="text-center text-xs text-muted">Yuklanmoqda…</p></div>`);
+         <div id="settings"><p class="text-center text-xs text-muted">Yuklanmoqda…</p></div>
+         <div id="wards"></div>`);
       loadSettings();
+      loadWards();
     }
 
     // ---- games (client-side; reuse the selected words) ---------------------
