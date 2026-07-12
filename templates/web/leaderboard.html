@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Oylik reyting — Essential Words</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root {
+      --bg: #f7f5ef; --card: #ffffff; --ink: #17140d; --muted: #6b6558;
+      --line: rgba(23,20,13,.10); --accent: #e6a700; --accent-ink: #241a00; --accent-deep: #a97800;
+      --mark: rgba(230,167,0,.42); --shadow: 0 1px 2px rgba(23,20,13,.05), 0 20px 44px -26px rgba(23,20,13,.28);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #100e0a; --card: #1a1712; --ink: #f3efe4; --muted: #a49c8b;
+        --line: rgba(180,170,150,.16); --accent: #eba400; --accent-ink: #201700; --accent-deep: #f0be55;
+        --mark: rgba(235,164,0,.30); --shadow: 0 1px 2px rgba(0,0,0,.4), 0 24px 50px -28px rgba(0,0,0,.7);
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+           font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+    a { color: inherit; text-decoration: none; }
+    .hl { background: linear-gradient(180deg, transparent 56%, var(--mark) 56%, var(--mark) 94%, transparent 94%); padding: 0 .05em; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 18px 18px 64px; }
+    .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; }
+    .brand .m { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(140deg, var(--accent), var(--accent-deep)); color: var(--accent-ink); display: grid; place-items: center; font-size: 15px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab { font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; }
+    .tab.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+    h1 { font-size: 26px; letter-spacing: -.02em; margin: 4px 0 2px; }
+    .sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 8px; box-shadow: var(--shadow); }
+    .row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 13px; }
+    .row + .row { border-top: 1px solid var(--line); }
+    .row.me { background: color-mix(in srgb, var(--accent) 12%, transparent); border-top-color: transparent; }
+    .rk { width: 30px; text-align: center; font-weight: 800; color: var(--muted); font-size: 15px; }
+    .rk.top { color: var(--accent-deep); }
+    .nm { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pts { font-weight: 800; }
+    .pts small { color: var(--muted); font-weight: 500; font-size: 12px; margin-left: 3px; }
+    .ses { color: var(--muted); font-size: 12px; width: 66px; text-align: right; }
+    .empty { text-align: center; color: var(--muted); padding: 40px 12px; }
+    .mine { margin-top: 14px; background: var(--card); border: 1px dashed var(--line); border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="brand" href="/"><span class="m">📖</span> Essential Words</a>
+      <a class="tab" href="/app/">← Kabinet</a>
+    </div>
+    <div class="tabs">
+      <a class="tab" href="/app/">Statistika</a>
+      <a class="tab on" href="/app/top/">Reyting</a>
+    </div>
+
+    <h1>🏆 Oylik <span class="hl">reyting</span></h1>
+    <p class="sub">{{ month|date:"F Y" }} · imtihon ballari bo'yicha eng faol o'quvchilar</p>
+
+    {% if rows %}
+    <div class="card">
+      {% for r in rows %}
+      <div class="row{% if r.user_id == user.id %} me{% endif %}">
+        <div class="rk{% if r.rank <= 3 %} top{% endif %}">{% if r.rank == 1 %}🥇{% elif r.rank == 2 %}🥈{% elif r.rank == 3 %}🥉{% else %}{{ r.rank }}{% endif %}</div>
+        <div class="nm">{{ r.name }}</div>
+        <div class="pts">{{ r.points }}<small>ball</small></div>
+        <div class="ses">{{ r.sessions }} kun</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card"><div class="empty">Bu oyda hali imtihon topshirilmagan.<br>Birinchi bo'ling! 🚀</div></div>
+    {% endif %}
+
+    {% if mine and not in_top %}
+    <div class="mine"><span>Sizning o'rningiz</span><span><b>#{{ mine.0 }}</b> · {{ mine.1 }} ball</span></div>
+    {% endif %}
+  </div>
+</body>
+</html>

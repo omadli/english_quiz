@@ -89,6 +89,27 @@ def dashboard(request):
     )
 
 
+@login_required
+def leaderboard(request):
+    from django.utils import timezone
+
+    from apps.learning.services.ranking import build_monthly_leaderboard, user_month_rank
+
+    today = timezone.localdate()
+    rows = build_monthly_leaderboard(today.year, today.month, limit=20)
+    mine = user_month_rank(request.user, today.year, today.month)
+    return render(
+        request,
+        "web/leaderboard.html",
+        {
+            "rows": rows,
+            "mine": mine,
+            "month": today,
+            "in_top": any(r["user_id"] == request.user.id for r in rows),
+        },
+    )
+
+
 @require_POST  # a GET <img src="/logout/"> must not be able to log the user out
 def logout_view(request):
     logout(request)

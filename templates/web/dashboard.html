@@ -61,6 +61,9 @@
     .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font: inherit; font-weight: 700; border-radius: 12px; padding: 12px 18px; font-size: 14px; }
     .btn-gold { background: var(--accent); color: var(--accent-ink); }
     .muted { color: var(--muted); font-size: 13px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab { font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; }
+    .tab.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
   </style>
 </head>
 <body>
@@ -68,6 +71,11 @@
     <div class="top">
       <a class="brand" href="/"><span class="m">📖</span> Essential Words</a>
       <form method="post" action="/logout/">{% csrf_token %}<button class="logout">Chiqish</button></form>
+    </div>
+
+    <div class="tabs">
+      <a class="tab on" href="/app/">Statistika</a>
+      <a class="tab" href="/app/top/">🏆 Reyting</a>
     </div>
 
     <div class="grid">

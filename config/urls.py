@@ -13,6 +13,7 @@ urlpatterns = [
     path("login/", accounts_views.login_page, name="login"),
     path("logout/", accounts_views.logout_view, name="logout"),
     path("app/", accounts_views.dashboard, name="dashboard"),
+    path("app/top/", accounts_views.leaderboard, name="leaderboard"),
     path("app/api/request-code/", accounts_views.api_request_code, name="request_code"),
     path("app/api/verify-code/", accounts_views.api_verify_code, name="verify_code"),
     path("app/api/session/", accounts_views.api_session_init, name="session_init"),
