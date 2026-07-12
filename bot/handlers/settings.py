@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
+from apps.common.tts import voice_label
 from apps.learning.models import LearningProfile
 from bot import strings
 from bot.keyboards.onboarding import (
@@ -13,7 +14,6 @@ from bot.keyboards.onboarding import (
     weekdays_keyboard,
     words_keyboard,
 )
-from apps.common.tts import voice_label
 from bot.keyboards.settings import (
     en_voice_keyboard,
     repeat_keyboard,
