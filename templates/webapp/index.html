@@ -400,12 +400,108 @@
         });
       });
       if (words.length >= 4) {
-        document.getElementById("t-exam").addEventListener("click", () => showTodayExam(words));
+        document.getElementById("t-exam").addEventListener("click", () => showExam());
       }
     }
-    function showTodayExam(words) {
-      setHeader("Imtihon", "Bugungi so'zlar bo'yicha"); setBack(() => showToday());
-      gameMenu(words, () => showTodayExam(words));
+
+    // ---- Bo'limli imtihon: Test -> Yozish -> Tinglash -> Gapirish ----------
+    async function apiExam() { return getJSON("api/exam/"); }
+    async function submitExam(answers) {
+      const res = await fetch("/webapp/api/exam/submit/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": initData },
+        body: JSON.stringify({ answers }),
+      });
+      if (!res.ok) throw new Error(res.status);
+      return res.json();
+    }
+    const EX_LABEL = { quiz: "Test", writing: "Yozish", listening: "Tinglash", speaking: "Gapirish" };
+    async function showExam() {
+      setHeader("Imtihon", "Bo'limli imtihon"); setBack(() => setTab("today")); loading();
+      let data;
+      try { data = await apiExam(); } catch (e) { return message("Imtihon hozircha ochilmadi."); }
+      const queue = [];
+      (data.sections || []).forEach((s) => s.questions.forEach((q) => queue.push({ kind: s.kind, q })));
+      if (!queue.length) return message("Bugungi imtihon yo'q — so'zlar kelgach ochiladi. 🌅");
+      const answers = [];
+      let i = 0;
+      function record(answer) {
+        answers.push({ word_id: queue[i].q.word_id, kind: queue[i].kind, answer: answer || "" });
+        i++;
+        (i >= queue.length) ? finish() : render();
+      }
+      async function finish() {
+        loading(); setBack(null);
+        let r;
+        try { r = await submitExam(answers); } catch (e) { return message("Yuborishda xatolik. Qaytadan urining."); }
+        setContent("px-4 py-12 pb-24 text-center space-y-3",
+          `<div class="text-6xl a-pop">🏁</div>
+           <div class="text-3xl font-black tracking-tight">${r.score}<span class="text-muted text-xl">/${r.total}</span></div>
+           <p class="text-sm text-muted">Imtihon yakunlandi — to'liq natija botga yuborildi.</p>
+           <button id="ex-done" class="mt-3 rounded-2xl bg-accent text-accent-ink font-semibold px-7 py-3 active:scale-95 transition">Yopish</button>`);
+        document.getElementById("ex-done").addEventListener("click", () => setTab("today"));
+      }
+      const progress = () => `<div class="h-1.5 rounded-full bg-line overflow-hidden mb-4"><div class="h-full bg-accent" style="width:${Math.round((i / queue.length) * 100)}%"></div></div>`;
+      const mcq = (q) => q.options.map((o) => `<button class="js-xopt w-full rounded-2xl bg-card border border-line p-3.5 text-left text-[15px] active:scale-[.99] transition" data-v="${esc(o)}">${esc(o)}</button>`).join("");
+      function bindMcq() {
+        contentEl.querySelectorAll(".js-xopt").forEach((el) => el.addEventListener("click", () => {
+          if (contentEl.dataset.answered) return;
+          contentEl.dataset.answered = "1";
+          el.classList.add("ring-2", "ring-accent");
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+          setTimeout(() => { delete contentEl.dataset.answered; record(el.dataset.v); }, 220);
+        }));
+      }
+      function render() {
+        const { kind, q } = queue[i];
+        setHeader(`${EX_LABEL[kind]} · ${i + 1}/${queue.length}`, "");
+        if (kind === "quiz") {
+          setContent("px-4 py-5 pb-24 space-y-3", progress() +
+            `<div class="text-center mb-4"><div class="text-3xl font-bold tracking-tight">${esc(q.en)}</div><div class="text-xs text-muted mt-1">${esc(q.pos || "")} ${esc(q.ipa || "")}</div><div class="text-[11px] text-muted mt-2">To'g'ri tarjimani tanlang</div></div>` + mcq(q));
+          bindMcq();
+        } else if (kind === "listening") {
+          setContent("px-4 py-5 pb-24 space-y-3", progress() +
+            `<div class="text-center mb-4"><button id="ex-play" class="mx-auto grid h-20 w-20 place-items-center rounded-full bg-accent text-accent-ink text-3xl active:scale-90 transition">🔊</button><div class="text-xs text-muted mt-2">Tinglang va ma'noni tanlang</div></div>` + mcq(q));
+          const play = () => speak(q.en);
+          document.getElementById("ex-play").addEventListener("click", play);
+          setTimeout(play, 350);
+          bindMcq();
+        } else if (kind === "writing") {
+          setContent("px-4 py-5 pb-24 space-y-3", progress() +
+            `<div class="text-center mb-4"><div class="text-xl font-semibold text-rose-400">${esc(q.uz)}</div>${q.definition ? `<div class="text-xs text-muted mt-1">${esc(q.definition)}</div>` : ""}<div class="text-[11px] text-muted mt-2">${q.len} harf · <b>${esc(q.first)}</b>…</div></div>
+             <input id="ex-w" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Inglizcha yozing…" class="w-full rounded-2xl bg-card border border-line px-4 py-3 text-[15px] text-ink outline-none">
+             <button id="ex-wc" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3 mt-1 active:scale-[.99] transition">Keyingi</button>`);
+          const inp = document.getElementById("ex-w");
+          const go = () => record(inp.value.trim());
+          document.getElementById("ex-wc").addEventListener("click", go);
+          inp.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+          inp.focus();
+        } else {  // speaking
+          setContent("px-4 py-6 pb-24 text-center space-y-3", progress() +
+            `<div class="text-3xl font-bold tracking-tight">${esc(q.en)}</div><div class="text-sm text-muted">${esc(q.ipa || "")}</div>
+             <div class="pt-4"><button id="ex-mic" class="mx-auto grid h-24 w-24 place-items-center rounded-full bg-accent text-accent-ink text-4xl active:scale-95 transition">🎤</button><div class="text-xs text-muted mt-3">Tugmani bosib, so'zni ayting</div></div>
+             <p id="ex-heard" class="text-sm text-muted min-h-[1.5em]"></p>
+             <button id="ex-skip" class="rounded-full border border-line px-4 py-2 text-sm text-muted mt-1">O'tkazib yuborish</button>`);
+          document.getElementById("ex-skip").addEventListener("click", () => record(""));
+          const mic = document.getElementById("ex-mic"), heard = document.getElementById("ex-heard");
+          if (!SpeechRec) { heard.textContent = "Ovozli tanish qo'llab-quvvatlanmaydi — o'tkazib yuboring."; return; }
+          let busy = false;
+          mic.addEventListener("click", () => {
+            if (busy) return; busy = true;
+            const rec = new SpeechRec();
+            rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
+            mic.classList.add("a-listen"); heard.textContent = "🎙 Tinglanmoqda…";
+            rec.onresult = (e) => {
+              const t = (e.results[0][0].transcript || "").trim();
+              heard.textContent = "🗣 " + t; mic.classList.remove("a-listen");
+              setTimeout(() => record(t), 500);
+            };
+            rec.onerror = () => { mic.classList.remove("a-listen"); busy = false; heard.textContent = "Qaytadan urinib ko'ring."; };
+            rec.start();
+          });
+        }
+      }
+      render();
     }
 
     // ---- PROFIL tab --------------------------------------------------------
@@ -455,6 +551,7 @@
         ${row("Ingliz ovozi", voicePicker("js-envoice", s.en_voices, s.en_voice, "en"))}
         ${row("O'zbek ovozi", voicePicker("js-uzvoice", s.uz_voices, s.uz_voice, "uz"))}
         ${row("Bildirishnomalar", toggle("js-nudge", s.nudges_enabled))}
+        ${row("Gapirish imtihoni", toggle("js-speaking", s.speaking_enabled))}
         <button id="js-save" class="w-full rounded-xl bg-accent text-accent-ink py-2.5 font-semibold">💾 Saqlash</button>
       </div>`;
     }
@@ -500,6 +597,7 @@
             en_voice: document.getElementById("js-envoice").value,
             uz_voice: document.getElementById("js-uzvoice").value,
             nudges_enabled: document.getElementById("js-nudge").dataset.on === "1",
+            speaking_enabled: document.getElementById("js-speaking").dataset.on === "1",
           });
           if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
           btn.textContent = "✅ Saqlandi";
@@ -575,6 +673,7 @@
             en_voice: document.getElementById("js-envoice").value,
             uz_voice: document.getElementById("js-uzvoice").value,
             nudges_enabled: document.getElementById("js-nudge").dataset.on === "1",
+            speaking_enabled: document.getElementById("js-speaking").dataset.on === "1",
           });
           if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
           clone.textContent = "✅ Saqlandi";
@@ -982,7 +1081,10 @@
     document.querySelectorAll(".js-tab").forEach((el) => el.addEventListener("click", () => setTab(el.dataset.tab)));
 
     const _view = new URLSearchParams(location.search).get("view");
-    loadLearned(() => setTab(_view === "today" ? "today" : "books"));
+    loadLearned(() => {
+      if (_view === "exam") { setTab("today"); showExam(); }
+      else setTab(_view === "today" ? "today" : "books");
+    });
   </script>
 </body>
 </html>

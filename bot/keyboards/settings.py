@@ -24,6 +24,9 @@ def settings_keyboard(profile) -> InlineKeyboardMarkup:
         [_btn(f"🇺🇿 {s.SETTINGS_UZ_VOICE}: {voice_label(profile.uz_voice)}", "set:uzvoice")],
         [_btn(f"🔁 {s.SETTINGS_REPEAT}: {profile.audio_repeat}", "set:repeat")],
         [_btn(f"🔔 {s.SETTINGS_NUDGES}: {nudges}", "set:nudges")],
+        [_btn(f"🗣 {s.SETTINGS_SPEAKING}: "
+              f"{s.BTN_AUDIO_ON if profile.speaking_enabled else s.BTN_AUDIO_OFF}",
+              "set:speaking")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

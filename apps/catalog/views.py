@@ -145,6 +145,7 @@ def _profile_payload(profile: LearningProfile) -> dict:
         "audio_enabled": profile.audio_enabled,
         "audio_repeat": profile.audio_repeat,
         "nudges_enabled": profile.nudges_enabled,
+        "speaking_enabled": profile.speaking_enabled,
         "en_voice": profile.en_voice,
         "uz_voice": profile.uz_voice,
         "en_voices": EN_VOICES,
@@ -187,7 +188,7 @@ def _clean_settings(payload: dict) -> dict:
             parsed = _parse_hhmm(payload[key])
             if parsed is not None:
                 updates[key] = parsed
-    for key in ("audio_enabled", "nudges_enabled"):
+    for key in ("audio_enabled", "nudges_enabled", "speaking_enabled"):
         if key in payload:
             updates[key] = bool(payload[key])
     if payload.get("en_voice") in {v[0] for v in EN_VOICES}:

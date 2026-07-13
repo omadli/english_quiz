@@ -48,6 +48,7 @@ SETTINGS_UZ_VOICE = "O'zbek ovozi"
 SETTINGS_REPEAT = "Takror"
 VOICE_SAMPLE_WAIT = "🔊 Namuna tayyorlanmoqda…"
 SETTINGS_NUDGES = "Eslatmalar"
+SETTINGS_SPEAKING = "Gapirish imtihoni"
 SETTINGS_EDIT_HINT = "O'zgartirish uchun tegishli tugmani bosing."
 
 PARENT_LINK = (
