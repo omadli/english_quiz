@@ -24,6 +24,7 @@ class LearningProfile(TimeStampedModel):
     audio_repeat = models.PositiveSmallIntegerField(default=2)
     en_voice = models.CharField(max_length=40, default="en-US-AriaNeural")
     uz_voice = models.CharField(max_length=40, default="uz-UZ-MadinaNeural")
+    speaking_enabled = models.BooleanField(default=False)  # opt-in speaking exam section
     timezone = models.CharField(max_length=40, default="Asia/Tashkent")
     language = models.CharField(max_length=8, default="uz")
     onboarded = models.BooleanField(default=False)
@@ -76,6 +77,8 @@ class DailySession(TimeStampedModel):
     total = models.PositiveSmallIntegerField(null=True, blank=True)
     study_nudged = models.BooleanField(default=False)
     pre_exam_nudged = models.BooleanField(default=False)
+    # exam reminder stage: 0 none · 1 pre · 2 prompt · 3 post
+    exam_stage = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         ordering = ("-date",)

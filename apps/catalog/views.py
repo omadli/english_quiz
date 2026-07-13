@@ -293,6 +293,48 @@ def api_ward_settings(request, learner_id: int):
     return JsonResponse(_profile_payload(profile))
 
 
+def _today_session_for(profile):
+    from zoneinfo import ZoneInfo
+
+    today = timezone.now().astimezone(ZoneInfo(profile.timezone)).date()
+    return DailySession.objects.filter(user=profile.user, date=today).first()
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_exam(request):
+    """Today's sectioned exam payload (Quiz/Writing/Listening/Speaking) for the Mini App."""
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    session = _today_session_for(profile)
+    if session is None:
+        return JsonResponse({"sections": []})
+    from apps.learning.services.exam_app import build_exam
+
+    return JsonResponse(build_exam(session, profile))
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_submit_exam(request):
+    """Grade a completed Mini App exam server-side (SM-2 + finalize)."""
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    session = _today_session_for(profile)
+    if session is None:
+        return JsonResponse({"error": "no session"}, status=400)
+    try:
+        payload = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "bad json"}, status=400)
+    answers = payload.get("answers") if isinstance(payload, dict) else None
+    if not isinstance(answers, list):
+        return JsonResponse({"error": "bad answers"}, status=400)
+    from apps.learning.services.exam_app import submit_exam
+
+    return JsonResponse(submit_exam(session, answers))
+
+
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
 def api_learned(request):
     """GET → the user's learned word ids (read-only). Learned state is earned by
