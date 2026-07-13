@@ -5,7 +5,7 @@ import time
 from aiogram.utils.web_app import safe_parse_webapp_init_data
 from django.conf import settings
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -81,6 +81,23 @@ def api_units(request, book_id: int):
 def api_words(request, unit_id: int):
     words = Word.objects.filter(unit_id=unit_id).select_related("unit").order_by("order")
     return JsonResponse({"words": [_word_payload(w) for w in words]})
+
+
+def api_voice_sample(request):
+    """Return a short MP3 sample of a TTS voice so users can preview it before choosing."""
+    from apps.learning.services.audio import voice_sample
+
+    voice = request.GET.get("voice", "")
+    lang = request.GET.get("lang", "en")
+    valid = {v[0] for v in EN_VOICES} | {v[0] for v in UZ_VOICES}
+    if voice not in valid or lang not in ("en", "uz"):
+        return JsonResponse({"error": "bad voice"}, status=400)
+    data = voice_sample(voice, lang)
+    if not data:
+        return JsonResponse({"error": "unavailable"}, status=503)
+    resp = HttpResponse(data, content_type="audio/mpeg")
+    resp["Cache-Control"] = "public, max-age=86400"
+    return resp
 
 
 def api_search(request):

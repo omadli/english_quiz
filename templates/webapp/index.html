@@ -433,6 +433,8 @@
       const voiceOpt = (p, cur) => `<option value="${p[0]}" ${p[0] === cur ? "selected" : ""}>${p[1]}</option>`;
       const voiceSelect = (id, voices, cur) =>
         `<select id="${id}" class="bg-card border border-line rounded-xl px-3 py-2 text-sm">${(voices || []).map((p) => voiceOpt(p, cur)).join("")}</select>`;
+      const voicePicker = (id, voices, cur, lang) =>
+        `<div class="flex items-center gap-2"><button type="button" data-vs="${id}" data-lang="${lang}" class="js-vsample shrink-0 grid h-9 w-9 place-items-center rounded-full bg-accent/15 text-accent active:scale-90 transition" aria-label="Namuna eshitish">▶︎</button>${voiceSelect(id, voices, cur)}</div>`;
       const time = (id, val) =>
         `<input id="${id}" type="time" value="${val}" class="bg-card border border-line rounded-xl px-3 py-2 text-sm">`;
       const toggle = (id, on) =>
@@ -450,15 +452,28 @@
         ${row("Imtihon vaqti", time("js-exam", s.exam_time))}
         ${row("Audio", toggle("js-audio", s.audio_enabled))}
         ${row("Audio takror", select("js-rep", [1, 2, 3], s.audio_repeat))}
-        ${row("Ingliz ovozi", voiceSelect("js-envoice", s.en_voices, s.en_voice))}
-        ${row("O'zbek ovozi", voiceSelect("js-uzvoice", s.uz_voices, s.uz_voice))}
+        ${row("Ingliz ovozi", voicePicker("js-envoice", s.en_voices, s.en_voice, "en"))}
+        ${row("O'zbek ovozi", voicePicker("js-uzvoice", s.uz_voices, s.uz_voice, "uz"))}
         ${row("Bildirishnomalar", toggle("js-nudge", s.nudges_enabled))}
         <button id="js-save" class="w-full rounded-xl bg-accent text-accent-ink py-2.5 font-semibold">💾 Saqlash</button>
       </div>`;
     }
 
+    let _sampleAudio = null;
     function bindSettings(s) {
       const box = document.getElementById("settings");
+      box.querySelectorAll(".js-vsample").forEach((el) => el.addEventListener("click", () => {
+        const sel = document.getElementById(el.dataset.vs);
+        if (!sel || !sel.value) return;
+        if (_sampleAudio) { try { _sampleAudio.pause(); } catch (e) {} }
+        el.textContent = "⏳";
+        _sampleAudio = new Audio(`/webapp/api/voice-sample/?lang=${el.dataset.lang}&voice=${encodeURIComponent(sel.value)}`);
+        const reset = () => { el.textContent = "▶︎"; };
+        _sampleAudio.addEventListener("ended", reset);
+        _sampleAudio.addEventListener("error", reset);
+        _sampleAudio.addEventListener("playing", () => { el.textContent = "🔊"; });
+        _sampleAudio.play().catch(reset);
+      }));
       box.querySelectorAll(".js-day").forEach((el) => el.addEventListener("click", () => {
         const i = Number(el.dataset.day);
         s.study_weekdays = s.study_weekdays.includes(i)

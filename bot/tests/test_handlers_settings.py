@@ -43,8 +43,9 @@ def test_en_voice_keyboard_lists_all_voices():
         assert f"envoice:{vid}" in cbs
 
 
+@patch("bot.handlers.settings.voice_sample", return_value=None)  # no real TTS in the test
 @patch("bot.handlers.settings.sync_to_async", side_effect=_wrap_sync_to_async)
-async def test_save_en_voice_updates_and_rerenders(_mock_sta):
+async def test_save_en_voice_updates_and_rerenders(_mock_sta, _mock_sample):
     profile = _profile()
     callback = AsyncMock()
     callback.data = "envoice:en-US-GuyNeural"

@@ -48,6 +48,25 @@ def _segment(word: Word, lang: str, voice: str, text: str) -> AudioSegment | Non
     return AudioSegment.from_file(BytesIO(data), format="mp3")
 
 
+_SAMPLE_TEXT = {
+    "en": "Hello! This is a sample of this voice.",
+    "uz": "Salom! Bu — shu ovozning namunasi.",
+}
+
+
+def voice_sample(voice: str, lang: str) -> bytes | None:
+    """A short cached sample clip for a voice, so users can hear it before choosing."""
+    path = Path(settings.MEDIA_ROOT) / "audio" / "samples" / f"{lang}_{voice}.mp3"
+    if path.exists():
+        return path.read_bytes()
+    data = _tts_bytes(_SAMPLE_TEXT.get(lang, _SAMPLE_TEXT["en"]), lang, voice)
+    if data is None:
+        return None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return data
+
+
 def _export(combined: AudioSegment) -> bytes:
     buf = BytesIO()
     combined.export(buf, format="mp3")

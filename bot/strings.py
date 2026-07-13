@@ -46,6 +46,7 @@ SETTINGS_AUDIO = "Audio"
 SETTINGS_EN_VOICE = "Ingliz ovozi"
 SETTINGS_UZ_VOICE = "O'zbek ovozi"
 SETTINGS_REPEAT = "Takror"
+VOICE_SAMPLE_WAIT = "🔊 Namuna tayyorlanmoqda…"
 SETTINGS_NUDGES = "Eslatmalar"
 SETTINGS_EDIT_HINT = "O'zgartirish uchun tegishli tugmani bosing."
 

@@ -1,11 +1,12 @@
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
 from apps.common.tts import voice_label
 from apps.learning.models import LearningProfile
+from apps.learning.services.audio import voice_sample
 from bot import strings
 from bot.keyboards.onboarding import (
     audio_keyboard,
@@ -142,24 +143,36 @@ async def edit_repeat(callback: CallbackQuery, profile: LearningProfile) -> None
     )
 
 
+async def _play_voice_sample(message: Message, voice: str, lang: str) -> None:
+    """Send a short sample clip so the user hears the voice they just picked."""
+    data = await sync_to_async(voice_sample)(voice, lang)
+    if data:
+        try:
+            await message.answer_audio(BufferedInputFile(data, "namuna.mp3"), title="🔊 Namuna")
+        except Exception:  # best-effort preview
+            pass
+
+
 @router.callback_query(F.data.startswith("envoice:"))
 async def save_en_voice(callback: CallbackQuery, profile: LearningProfile) -> None:
-    await callback.answer()
+    await callback.answer(strings.VOICE_SAMPLE_WAIT)
     profile.en_voice = callback.data.split(":", 1)[1]
     await sync_to_async(profile.save)(update_fields=["en_voice", "updated_at"])
     await callback.message.edit_text(
         format_profile(profile), reply_markup=settings_keyboard(profile)
     )
+    await _play_voice_sample(callback.message, profile.en_voice, "en")
 
 
 @router.callback_query(F.data.startswith("uzvoice:"))
 async def save_uz_voice(callback: CallbackQuery, profile: LearningProfile) -> None:
-    await callback.answer()
+    await callback.answer(strings.VOICE_SAMPLE_WAIT)
     profile.uz_voice = callback.data.split(":", 1)[1]
     await sync_to_async(profile.save)(update_fields=["uz_voice", "updated_at"])
     await callback.message.edit_text(
         format_profile(profile), reply_markup=settings_keyboard(profile)
     )
+    await _play_voice_sample(callback.message, profile.uz_voice, "uz")
 
 
 @router.callback_query(F.data.startswith("repeat:"))
