@@ -48,6 +48,7 @@ SETTINGS_UZ_VOICE = "O'zbek ovozi"
 SETTINGS_REPEAT = "Takror"
 VOICE_SAMPLE_WAIT = "🔊 Namuna tayyorlanmoqda…"
 SETTINGS_NUDGES = "Eslatmalar"
+SETTINGS_SPEAKING = "Gapirish imtihoni"
 SETTINGS_EDIT_HINT = "O'zgartirish uchun tegishli tugmani bosing."
 
 PARENT_LINK = (
@@ -78,7 +79,9 @@ WARD_REVOKED = "🗑 O'quvchi ajratildi."
 PICK_WARD = "Kimning hisobotini ko'rmoqchisiz?"
 
 NUDGE_STUDY = "📚 So'zlarni takrorlayapsizmi? Kechqurun imtihon bor — tayyorlaning! 💪"
-NUDGE_PRE_EXAM = "⏰ Imtihon vaqti yaqinlashdi! Tayyor bo'ling. 📝"
+NUDGE_PRE_EXAM = "⏰ Imtihon vaqti yaqinlashdi! Tayyor bo'lsangiz — boshlang. 📝"
+EXAM_PROMPT = "🎯 <b>Kechki imtihon tayyor!</b>\nBo'limlar: Test · Yozish · Tinglash. Tayyormisiz?"
+EXAM_REMINDER_POST = "⌛️ Imtihon hali topshirilmadi — sizni kutmoqda. Hoziroq boshlang! 🎯"
 NUDGE_STREAK = "🔥 <b>{streak} kunlik streak!</b> Zo'r ketyapsiz, barakalla! 🎉"
 
 TOP_TITLE = "🏆 <b>Oylik reyting</b>"

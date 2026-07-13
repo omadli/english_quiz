@@ -41,6 +41,8 @@ def format_profile(profile: LearningProfile) -> str:
         f"• {strings.SETTINGS_UZ_VOICE}: <b>{voice_label(profile.uz_voice)}</b>",
         f"• {strings.SETTINGS_REPEAT}: <b>{profile.audio_repeat}</b>",
         f"• {strings.SETTINGS_NUDGES}: <b>{nudges}</b>",
+        f"• {strings.SETTINGS_SPEAKING}: "
+        f"<b>{strings.BTN_AUDIO_ON if profile.speaking_enabled else strings.BTN_AUDIO_OFF}</b>",
         "",
         strings.SETTINGS_EDIT_HINT,
     ])
@@ -114,6 +116,16 @@ async def toggle_nudges(callback: CallbackQuery, profile: LearningProfile) -> No
     await callback.answer()
     profile.nudges_enabled = not profile.nudges_enabled
     await sync_to_async(profile.save)(update_fields=["nudges_enabled", "updated_at"])
+    await callback.message.edit_text(
+        format_profile(profile), reply_markup=settings_keyboard(profile)
+    )
+
+
+@router.callback_query(F.data == "set:speaking")
+async def toggle_speaking(callback: CallbackQuery, profile: LearningProfile) -> None:
+    await callback.answer()
+    profile.speaking_enabled = not profile.speaking_enabled
+    await sync_to_async(profile.save)(update_fields=["speaking_enabled", "updated_at"])
     await callback.message.edit_text(
         format_profile(profile), reply_markup=settings_keyboard(profile)
     )

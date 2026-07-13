@@ -145,6 +145,7 @@ def _profile_payload(profile: LearningProfile) -> dict:
         "audio_enabled": profile.audio_enabled,
         "audio_repeat": profile.audio_repeat,
         "nudges_enabled": profile.nudges_enabled,
+        "speaking_enabled": profile.speaking_enabled,
         "en_voice": profile.en_voice,
         "uz_voice": profile.uz_voice,
         "en_voices": EN_VOICES,
@@ -187,7 +188,7 @@ def _clean_settings(payload: dict) -> dict:
             parsed = _parse_hhmm(payload[key])
             if parsed is not None:
                 updates[key] = parsed
-    for key in ("audio_enabled", "nudges_enabled"):
+    for key in ("audio_enabled", "nudges_enabled", "speaking_enabled"):
         if key in payload:
             updates[key] = bool(payload[key])
     if payload.get("en_voice") in {v[0] for v in EN_VOICES}:
@@ -291,6 +292,48 @@ def api_ward_settings(request, learner_id: int):
                 setattr(profile, key, value)
             profile.save(update_fields=[*updates.keys(), "updated_at"])
     return JsonResponse(_profile_payload(profile))
+
+
+def _today_session_for(profile):
+    from zoneinfo import ZoneInfo
+
+    today = timezone.now().astimezone(ZoneInfo(profile.timezone)).date()
+    return DailySession.objects.filter(user=profile.user, date=today).first()
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_exam(request):
+    """Today's sectioned exam payload (Quiz/Writing/Listening/Speaking) for the Mini App."""
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    session = _today_session_for(profile)
+    if session is None:
+        return JsonResponse({"sections": []})
+    from apps.learning.services.exam_app import build_exam
+
+    return JsonResponse(build_exam(session, profile))
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+def api_submit_exam(request):
+    """Grade a completed Mini App exam server-side (SM-2 + finalize)."""
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    session = _today_session_for(profile)
+    if session is None:
+        return JsonResponse({"error": "no session"}, status=400)
+    try:
+        payload = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "bad json"}, status=400)
+    answers = payload.get("answers") if isinstance(payload, dict) else None
+    if not isinstance(answers, list):
+        return JsonResponse({"error": "bad answers"}, status=400)
+    from apps.learning.services.exam_app import submit_exam
+
+    return JsonResponse(submit_exam(session, answers))
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
