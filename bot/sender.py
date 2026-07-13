@@ -74,6 +74,25 @@ def send_text(chat_id: int, text: str) -> None:
     asyncio.run(_run())
 
 
+def send_exam_prompt(chat_id: int, text: str, webapp_url: str | None = None) -> None:
+    """Exam reminder/start-gate: a message + a '▶️ Imtihonni boshlash' WebApp button
+    (opens the sectioned Mini App exam) instead of dumping quiz polls."""
+    markup = None
+    if webapp_url:
+        markup = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="▶️ Imtihonni boshlash", web_app=WebAppInfo(url=webapp_url))
+        ]])
+
+    async def _run() -> None:
+        bot = _make_bot()
+        try:
+            await bot.send_message(chat_id, text, reply_markup=markup)
+        finally:
+            await bot.session.close()
+
+    asyncio.run(_run())
+
+
 async def _send_quiz_poll(
     bot: Bot,
     chat_id: int,

@@ -14,6 +14,7 @@ class Command(BaseCommand):
             "dispatch_evening_exams": "apps.learning.tasks.dispatch_evening_exams",
             "finalize_due_exams": "apps.learning.tasks.finalize_due_exams",
             "dispatch_pre_exam_nudges": "apps.learning.tasks.dispatch_pre_exam_nudges",
+            "dispatch_post_exam_reminders": "apps.learning.tasks.dispatch_post_exam_reminders",
         }
         for name, task in tasks.items():
             PeriodicTask.objects.update_or_create(
