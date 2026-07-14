@@ -18,18 +18,32 @@ logger = logging.getLogger(__name__)
 
 async def run_group_quiz(bot: Bot, session_id: int) -> None:
     """Sequentially send quiz polls for a group session, then post the leaderboard."""
+    from bot.quiz_control import clear_control, new_control
+
     if await sync_to_async(is_aborted)(session_id):
         return  # /stop landed during the ready-check countdown — don't launch
     await sync_to_async(prepare_questions)(session_id)
     questions = await sync_to_async(pending_questions)(session_id)
+    chat_id = await sync_to_async(_chat_id)(session_id)
+    control = new_control(chat_id)
 
     total = len(questions)
+    try:
+        await _send_polls(bot, session_id, chat_id, questions, total, control)
+    finally:
+        clear_control(chat_id)
+
+    chat_id, text = await sync_to_async(finish_and_leaderboard)(session_id)
+    await bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+
+
+async def _send_polls(bot, session_id, chat_id, questions, total, control) -> None:
     for i, question in enumerate(questions, start=1):
-        if await sync_to_async(is_aborted)(session_id):
+        if not await control.gate() or await sync_to_async(is_aborted)(session_id):
             break
         try:
             msg = await bot.send_poll(
-                chat_id=(await sync_to_async(_chat_id)(session_id)),
+                chat_id=chat_id,
                 question=f"{i}/{total}) {question['prompt']}"[:300],
                 options=question["options"],
                 type=PollType.QUIZ,
@@ -44,9 +58,6 @@ async def run_group_quiz(bot: Bot, session_id: int) -> None:
             logger.warning("group quiz send failed (session %s): %s", session_id, exc)
             continue
         await asyncio.sleep(await sync_to_async(_interval)(session_id))
-
-    chat_id, text = await sync_to_async(finish_and_leaderboard)(session_id)
-    await bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
 
 
 def _chat_id(session_id: int) -> int:

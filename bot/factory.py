@@ -14,6 +14,7 @@ from bot.handlers import (
     menu,
     onboarding,
     quiz,
+    quiz_control,
     quiz_practice,
     relations,
     settings,
@@ -45,4 +46,5 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(menu.router)
     dp.include_router(words.router)
     dp.include_router(quiz_practice.router)
+    dp.include_router(quiz_control.router)
     return dp

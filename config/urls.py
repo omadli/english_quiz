@@ -24,6 +24,8 @@ urlpatterns = [
     path("webapp/api/words/<int:unit_id>/", catalog_views.api_words, name="webapp_words"),
     path("webapp/api/search/", catalog_views.api_search, name="webapp_search"),
     path("webapp/api/voice-sample/", catalog_views.api_voice_sample, name="webapp_voice_sample"),
+    path("webapp/api/word-audio/<int:word_id>/", catalog_views.api_word_audio,
+         name="webapp_word_audio"),
     path("webapp/api/profile/", catalog_views.api_profile, name="webapp_profile"),
     path("webapp/api/learned/", catalog_views.api_learned, name="webapp_learned"),
     path("webapp/api/today/", catalog_views.api_today, name="webapp_today"),

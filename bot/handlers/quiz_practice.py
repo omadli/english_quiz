@@ -287,10 +287,33 @@ async def run_personal_quiz(
 ) -> None:
     """QuizBot-style: one poll at a time (open_period=timer); advance on answer,
     mark skips on timeout, pause after 2 consecutive skips."""
+    from bot.quiz_control import clear_control, new_control
+
+    control = new_control(chat_id)
+    try:
+        correct = await _run_personal_loop(bot, chat_id, questions, timer, control)
+    finally:
+        clear_control(chat_id)
+    if correct is None:  # /stop pressed → no result summary
+        return
+    await bot.send_message(
+        chat_id, strings.QUIZ_RESULT.format(correct=correct, total=len(questions))
+    )
+    # Completing the test is the ONLY way its words become 'learned' (no manual marking).
+    word_ids = [q["word"].id for q in questions if q.get("word")]
+    marked = await sync_to_async(mark_words_learned)(chat_id, word_ids)
+    if marked:
+        await bot.send_message(chat_id, strings.QUIZ_LEARNED_MARKED.format(n=marked))
+
+
+async def _run_personal_loop(bot, chat_id, questions, timer, control) -> int | None:
+    """The poll loop. Returns the correct count, or None if the user hit /stop."""
     correct = 0
     skips = 0
     total = len(questions)
     for i, question in enumerate(questions, start=1):
+        if not await control.gate():  # blocks while paused; False → stopped
+            return None
         event = asyncio.Event()
         try:
             msg = await bot.send_poll(
@@ -320,14 +343,7 @@ async def run_personal_quiz(
             if skips >= 2:
                 await bot.send_message(chat_id, strings.QUIZ_PAUSED)
                 _pending.pop(poll_id, None)
-                return
+                return None
         finally:
             _pending.pop(poll_id, None)
-    await bot.send_message(
-        chat_id, strings.QUIZ_RESULT.format(correct=correct, total=len(questions))
-    )
-    # Completing the test is the ONLY way its words become 'learned' (no manual marking).
-    word_ids = [q["word"].id for q in questions if q.get("word")]
-    marked = await sync_to_async(mark_words_learned)(chat_id, word_ids)
-    if marked:
-        await bot.send_message(chat_id, strings.QUIZ_LEARNED_MARKED.format(n=marked))
+    return correct

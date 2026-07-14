@@ -136,6 +136,13 @@ QUIZ_PAUSED = (
     "⏸ Ketma-ket 2 ta savolga javob bermadingiz — to'xtatildi. "
     "Davom etish: 🧠 Test / Quiz."
 )
+QUIZ_PAUSE_NONE = "To'xtatiladigan faol test yo'q."
+QUIZ_PAUSE_ADMIN = "Testni faqat guruh adminlari boshqara oladi."
+QUIZ_PAUSED_MSG = "⏸ Test to'xtatildi (joriy savoldan keyin). 👇"
+QUIZ_PAUSE_RESUME_BTN = "▶️ Davom etish"
+QUIZ_PAUSE_STOP_BTN = "⏹ To'xtatish"
+QUIZ_RESUMED_MSG = "▶️ Test davom etmoqda!"
+QUIZ_STOPPED_MSG = "⏹ Test to'xtatildi."
 QUIZ_RESULT = "🏁 <b>Mashq tugadi!</b>\nNatija: <b>{correct}/{total}</b> to'g'ri 🎯"
 QUIZ_LEARNED_MARKED = "📚 <b>{n}</b> so'z «o'rganilgan» deb belgilandi ✅"
 BTN_ALL_UNITS = "🗂 Hammasi"

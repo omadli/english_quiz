@@ -71,6 +71,9 @@ def test_submit_exam_grades_finalizes_and_srs():
     # SM-2 applied per word
     assert WordProgress.objects.filter(user=user, word=words[0]).exists()
     assert WordProgress.objects.get(user=user, word=words[2]).wrong_count == 1
+    # Completing the exam marks all its words 'learned' (even the wrong one).
+    from apps.learning.models import LearnedWord
+    assert LearnedWord.objects.filter(user=user).count() == 3
 
 
 def test_submit_exam_idempotent_when_completed():

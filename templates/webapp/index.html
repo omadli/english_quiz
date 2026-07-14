@@ -156,6 +156,16 @@
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
     }
+    // Real TTS pronunciation (edge-tts, cached) — browser speechSynthesis is
+    // unreliable in the Telegram in-app browser. Falls back to it on any error.
+    let _wordAudio = null;
+    function playWord(wordId, fallbackText) {
+      try { if (_wordAudio) _wordAudio.pause(); } catch (e) {}
+      const a = new Audio(`api/word-audio/${wordId}/`);
+      _wordAudio = a;
+      a.addEventListener("error", () => speak(fallbackText));
+      a.play().catch(() => speak(fallbackText));
+    }
 
     // Navigation: one back action driving BOTH the in-app header button (works
     // in any browser) and Telegram's native BackButton (when inside Telegram).
@@ -227,7 +237,7 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
             <h3 class="text-[15px] font-bold text-emerald-400">${esc(w.en)}</h3>${ipa}${pos}
-            <button data-en="${esc(w.en)}" class="js-speak ml-auto shrink-0 grid h-7 w-7 place-items-center rounded-full bg-accent/10 text-accent active:scale-90 transition">${speakerSvg}</button>
+            <button data-en="${esc(w.en)}" data-id="${w.id}" class="js-speak ml-auto shrink-0 grid h-7 w-7 place-items-center rounded-full bg-accent/10 text-accent active:scale-90 transition">${speakerSvg}</button>
           </div>
           <p class="text-[13px] font-semibold text-rose-400">${esc(w.uz) || "—"}</p>
           ${def}${ex}${ctx}
@@ -237,7 +247,7 @@
     function bindWordCards() {
       contentEl.querySelectorAll(".js-speak").forEach((el) => el.addEventListener("click", (e) => {
         e.stopPropagation();
-        speak(el.dataset.en);
+        el.dataset.id ? playWord(el.dataset.id, el.dataset.en) : speak(el.dataset.en);
       }));
     }
 
@@ -362,8 +372,8 @@
     async function apiToday() { return getJSON("api/today/"); }
     async function showToday() {
       loading(); setHeader("Bugungi so'zlar", "Ertalabki mashq"); setBack(null);
-      let words = [];
-      try { words = (await apiToday()).words || []; } catch (e) { words = []; }
+      let words = [], status = "none";
+      try { const t = await apiToday(); words = t.words || []; status = t.status || "none"; } catch (e) { words = []; }
       if (!words.length) {
         setContent("px-4 py-6 pb-24",
           `<div class="rounded-2xl bg-card border border-line p-7 text-center space-y-3">
@@ -379,8 +389,11 @@
         document.getElementById("e-games").addEventListener("click", () => setTab("games"));
         return;
       }
-      const exam = words.length >= 4
-        ? `<button id="t-exam" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3.5 active:scale-[.99] transition">🎯 Imtihon topshirish</button>` : "";
+      const done = status === "completed";
+      const exam = done
+        ? `<div class="rounded-2xl bg-accent/10 border border-accent/30 text-accent font-semibold py-3 text-center text-sm">✅ Bugungi imtihon topshirildi</div>`
+        : (words.length >= 4
+          ? `<button id="t-exam" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3.5 active:scale-[.99] transition">🎯 Imtihon topshirish</button>` : "");
       setContent("px-4 py-4 pb-24 space-y-3",
         `<div class="rounded-2xl bg-card border border-line p-4 flex items-center justify-between gap-3">
            <div>
@@ -399,7 +412,7 @@
           speechSynthesis.speak(u);
         });
       });
-      if (words.length >= 4) {
+      if (!done && words.length >= 4) {
         document.getElementById("t-exam").addEventListener("click", () => showExam());
       }
     }
@@ -462,7 +475,7 @@
         } else if (kind === "listening") {
           setContent("px-4 py-5 pb-24 space-y-3", progress() +
             `<div class="text-center mb-4"><button id="ex-play" class="mx-auto grid h-20 w-20 place-items-center rounded-full bg-accent text-accent-ink text-3xl active:scale-90 transition">🔊</button><div class="text-xs text-muted mt-2">Tinglang va ma'noni tanlang</div></div>` + mcq(q));
-          const play = () => speak(q.en);
+          const play = () => playWord(q.word_id, q.en);
           document.getElementById("ex-play").addEventListener("click", play);
           setTimeout(play, 350);
           bindMcq();

@@ -67,6 +67,20 @@ def voice_sample(voice: str, lang: str) -> bytes | None:
     return data
 
 
+def word_audio(word: Word, voice: str) -> bytes | None:
+    """Cached single-word EN clip for Mini App listening. Reuses the per-word seg
+    cache, so it warms the same files the daily-audio builder uses."""
+    path = _seg_path(word, "en", voice)
+    if path.exists():
+        return path.read_bytes()
+    data = _tts_bytes(word.en, "en", voice)
+    if data is None:
+        return None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return data
+
+
 def _export(combined: AudioSegment) -> bytes:
     buf = BytesIO()
     combined.export(buf, format="mp3")

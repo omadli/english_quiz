@@ -14,6 +14,7 @@ from django.utils import timezone
 from apps.catalog.models import Word
 from apps.learning.models import DailySession, ExamQuestion
 from apps.learning.services.exam import _distractors, select_exam_words
+from apps.learning.services.progress import mark_learned
 from apps.learning.services.report import finalize_exam
 from apps.learning.services.srs import grade_answer
 
@@ -108,6 +109,10 @@ def submit_exam(session: DailySession, answers: list[dict]) -> dict:
 
     for wid, results in per_word.items():  # SM-2 once per word (correct iff right in every section)
         grade_answer(session.user, words[wid], all(results))
+
+    # Completing the exam marks today's words 'learned' (same as the bot quiz),
+    # so an early daytime attempt lifts the task to 'learned' status.
+    mark_learned(session.user, list(per_word.keys()))
 
     session.total = created
     session.save(update_fields=["total", "updated_at"])

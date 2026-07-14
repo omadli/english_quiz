@@ -100,6 +100,26 @@ def api_voice_sample(request):
     return resp
 
 
+def api_word_audio(request, word_id: int):
+    """Real TTS pronunciation of one word — for the Mini App listening section
+    (browser speechSynthesis is unreliable in the Telegram in-app browser).
+    Public like voice-sample: a word's pronunciation isn't sensitive."""
+    from apps.learning.services.audio import word_audio
+
+    voice = request.GET.get("voice") or "en-US-AriaNeural"
+    if voice not in {v[0] for v in EN_VOICES}:
+        return JsonResponse({"error": "bad voice"}, status=400)
+    word = Word.objects.filter(id=word_id).first()
+    if word is None:
+        return JsonResponse({"error": "not found"}, status=404)
+    data = word_audio(word, voice)
+    if not data:
+        return JsonResponse({"error": "unavailable"}, status=503)
+    resp = HttpResponse(data, content_type="audio/mpeg")
+    resp["Cache-Control"] = "public, max-age=604800"
+    return resp
+
+
 def api_search(request):
     query = (request.GET.get("q") or "").strip()
     if len(query) < 2:
