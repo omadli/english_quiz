@@ -1,9 +1,6 @@
 import datetime
 import json
-import time
 
-from aiogram.utils.web_app import safe_parse_webapp_init_data
-from django.conf import settings
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -13,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.accounts.models import TelegramAccount
 from apps.catalog.models import Book, Unit, Word
 from apps.common.tts import EN_VOICES, UZ_VOICES
+from apps.common.webapp_auth import parse_init_data
 from apps.learning.models import DailySession, LearnedWord, LearningProfile
 from apps.learning.services.dashboard import build_dashboard
 from apps.relations.services.guardian import ward_profile
@@ -133,19 +131,12 @@ def api_search(request):
 
 
 # ---- Mini App settings (Telegram initData-authenticated) --------------------
-_INIT_DATA_MAX_AGE = 86400  # seconds; reject stale/replayed initData
 
 
 def _profile_from_request(request) -> LearningProfile | None:
     """Resolve the caller's LearningProfile from a validated Telegram initData header."""
-    init_data = request.headers.get("X-Telegram-Init-Data", "")
-    if not init_data or not settings.BOT_TOKEN:
-        return None
-    try:
-        data = safe_parse_webapp_init_data(token=settings.BOT_TOKEN, init_data=init_data)
-    except ValueError:
-        return None  # bad/forged signature
-    if data.user is None or time.time() - data.auth_date.timestamp() > _INIT_DATA_MAX_AGE:
+    data = parse_init_data(request.headers.get("X-Telegram-Init-Data", ""))
+    if data is None:
         return None
     account = (
         TelegramAccount.objects.select_related("user").filter(telegram_id=data.user.id).first()
@@ -249,14 +240,15 @@ def api_today(request):
     if session is None:
         return JsonResponse({"words": [], "status": "none"})
     words = [
-        sw.word
-        for sw in session.session_words.select_related("word__unit__book").order_by("order")
+        sw.word for sw in session.session_words.select_related("word__unit__book").order_by("order")
     ]
-    return JsonResponse({
-        "status": session.status,
-        "date": today.isoformat(),
-        "words": [_word_payload(w, with_context=True) for w in words],
-    })
+    return JsonResponse(
+        {
+            "status": session.status,
+            "date": today.isoformat(),
+            "words": [_word_payload(w, with_context=True) for w in words],
+        }
+    )
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
@@ -287,9 +279,7 @@ def api_wards(request):
     if profile is None:
         return JsonResponse({"error": "unauthorized"}, status=401)
     wards = guardian_wards(profile.user)
-    return JsonResponse(
-        {"wards": [{"id": w.id, "name": w.full_name or str(w.pk)} for w in wards]}
-    )
+    return JsonResponse({"wards": [{"id": w.id, "name": w.full_name or str(w.pk)} for w in wards]})
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie

@@ -14,8 +14,12 @@ TOKEN = "123:TESTTOKEN"
 pytestmark = pytest.mark.django_db
 
 
-def _init_data(user: dict, auth_date: int | None = None, token: str = TOKEN) -> str:
-    """Build a signed Telegram WebApp initData string (mirrors the client)."""
+def _init_data(
+    user: dict, auth_date: int | None = None, token: str = TOKEN, signature: str = "abc123"
+) -> str:
+    """Build a signed Telegram WebApp initData string (mirrors the client).
+    Real clients send a `signature` field, which Telegram excludes from the
+    hashed check string — keep it here so we test what Telegram actually sends."""
     fields = {
         "auth_date": str(auth_date if auth_date is not None else int(time.time())),
         "user": json.dumps(user, separators=(",", ":")),
@@ -23,6 +27,8 @@ def _init_data(user: dict, auth_date: int | None = None, token: str = TOKEN) -> 
     dcs = "\n".join(f"{k}={fields[k]}" for k in sorted(fields))
     secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
     fields["hash"] = hmac.new(secret, dcs.encode(), hashlib.sha256).hexdigest()
+    if signature:
+        fields["signature"] = signature
     return urlencode(fields)
 
 
@@ -73,6 +79,16 @@ def test_profile_get_returns_settings_and_progress(client, settings):
     assert data["words_per_session"] == 10
     assert data["morning_time"] == "07:00"
     assert data["learned_words"] == 0
+
+
+def test_profile_accepts_init_data_without_signature(client, settings):
+    settings.BOT_TOKEN = TOKEN  # older clients omit it; stripping must not break them
+    _user(555)
+    resp = client.get(
+        "/webapp/api/profile/",
+        HTTP_X_TELEGRAM_INIT_DATA=_init_data({"id": 555, "first_name": "Ali"}, signature=""),
+    )
+    assert resp.status_code == 200
 
 
 def test_profile_post_updates_editable_fields(client, settings):

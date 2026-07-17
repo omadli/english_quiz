@@ -1,7 +1,5 @@
 import json
-import time
 
-from aiogram.utils.web_app import safe_parse_webapp_init_data
 from django.conf import settings
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -12,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import TelegramAccount
 from apps.accounts.services.login import request_login_code, verify_login_code
+from apps.common.webapp_auth import parse_init_data
 
 _BACKEND = "django.contrib.auth.backends.ModelBackend"  # required: we bypass authenticate()
 
@@ -61,13 +60,8 @@ def api_session_init(request):
     init_data = _json_body(request).get("init_data") or request.headers.get(
         "X-Telegram-Init-Data", ""
     )
-    if not init_data or not settings.BOT_TOKEN:
-        return JsonResponse({"ok": False}, status=401)
-    try:
-        data = safe_parse_webapp_init_data(token=settings.BOT_TOKEN, init_data=init_data)
-    except ValueError:
-        return JsonResponse({"ok": False}, status=401)
-    if data.user is None or time.time() - data.auth_date.timestamp() > 86400:
+    data = parse_init_data(init_data)
+    if data is None:
         return JsonResponse({"ok": False}, status=401)
     account = (
         TelegramAccount.objects.select_related("user").filter(telegram_id=data.user.id).first()
