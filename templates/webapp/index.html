@@ -110,7 +110,22 @@
   <script>
     const tg = window.Telegram ? window.Telegram.WebApp : null;
     if (tg) { tg.ready(); tg.expand(); }
-    const initData = tg && tg.initData ? tg.initData : "";
+    // Leaving the page (e.g. opening a PDF) can bring us back in a fresh webview
+    // context, where Telegram's own sessionStorage copy of initData is gone and
+    // tg.initData reads empty — every authed endpoint then 401s. Keep our own
+    // copy in localStorage, which survives that. The server still caps initData
+    // at 24h, so this widens no window. Telegram-only: on the open web this
+    // origin is public, and restoring here would hand the last Telegram user's
+    // identity to whoever opens the page next.
+    const inTelegram = !!(tg && tg.platform && tg.platform !== "unknown");
+    const INIT_KEY = "tg_init_data";
+    let initData = tg && tg.initData ? tg.initData : "";
+    if (inTelegram) {
+      try {
+        if (initData) localStorage.setItem(INIT_KEY, initData);
+        else initData = localStorage.getItem(INIT_KEY) || "";
+      } catch (e) {}
+    }
 
     const titleEl = document.getElementById("title");
     const subtitleEl = document.getElementById("subtitle");
@@ -206,17 +221,25 @@
           .then((d) => { learned = new Set((d.ids || []).map(String)); })
           .catch(() => { learned = new Set(); })
           .finally(() => done && done());
-      } else if (tg && tg.CloudStorage) {
+      } else if (inTelegram && tg.CloudStorage) {
+        // CloudStorage is Bot API 6.9+; on older clients getItems throws
+        // WebAppMethodUnsupported synchronously. Uncaught, that kills boot — the
+        // callback below is what renders the first tab — so fall through instead.
         const keys = Array.from({ length: SHARDS }, (_, i) => "learned_" + i);
-        tg.CloudStorage.getItems(keys, (e, items) => {
-          learned = new Set();
-          if (items) Object.values(items).forEach((v) => (v || "").split(",").filter(Boolean).forEach((x) => learned.add(x)));
-          done && done();
-        });
+        try {
+          tg.CloudStorage.getItems(keys, (e, items) => {
+            learned = new Set();
+            if (items) Object.values(items).forEach((v) => (v || "").split(",").filter(Boolean).forEach((x) => learned.add(x)));
+            done && done();
+          });
+        } catch (e) { loadLearnedLocal(done); }
       } else {
-        learned = new Set((localStorage.getItem("learned") || "").split(",").filter(Boolean));
-        done && done();
+        loadLearnedLocal(done);
       }
+    }
+    function loadLearnedLocal(done) {
+      learned = new Set((localStorage.getItem("learned") || "").split(",").filter(Boolean));
+      done && done();
     }
     const speakerSvg = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a9 9 0 0 1 0 12" stroke-linecap="round"/></svg>';
 
@@ -297,7 +320,13 @@
       const doneCount = units.filter(isDone).length;
       let frontier = units.findIndex((u) => !isDone(u));  // first not-yet-completed
       if (frontier < 0) frontier = -1;                    // all done
-      const pdf = book.pdf ? `<a href="${book.pdf}" target="_blank" rel="noopener" class="shrink-0 rounded-full bg-card border border-line px-3 py-1.5 text-xs font-semibold text-accent active:scale-95 transition">📥 PDF</a>` : "";
+      const pdfCls = "shrink-0 rounded-full bg-card border border-line px-3 py-1.5 text-xs font-semibold text-accent active:scale-95 transition";
+      // Inside Telegram this is a button, not a link: navigating to the PDF drops
+      // us into a new webview context and loses initData (see getPDF).
+      const pdf = !book.pdf ? ""
+        : inTelegram
+          ? `<button id="pdfbtn" data-book="${book.id}" data-url="${book.pdf}" class="${pdfCls}">📥 PDF</button>`
+          : `<a href="${book.pdf}" download rel="noopener" class="${pdfCls}">📥 PDF</a>`;
       const STEP = 92, TOP = 54, H = TOP + (total - 1) * STEP + 96;
       setContent("px-4 py-3 pb-24",
         `<div class="flex items-center justify-between mb-2">
@@ -318,6 +347,34 @@
       box.innerHTML = html;
       box.querySelectorAll(".js-node").forEach((el) => el.addEventListener("click", () =>
         showWords(book, { id: el.dataset.id, number: el.dataset.n })));
+      const pdfBtn = document.getElementById("pdfbtn");
+      if (pdfBtn) pdfBtn.addEventListener("click", () => getPDF(pdfBtn));
+    }
+
+    // PDF inside Telegram: ask the bot to DM the file (cached file_id, no re-upload)
+    // AND hand it to Telegram's downloader. Never navigate — that costs us initData.
+    async function getPDF(btn) {
+      const { book, url } = btn.dataset;
+      btn.disabled = true;
+      btn.textContent = "⏳ Yuborilmoqda…";
+      let sent = false;
+      try {
+        const res = await fetch(`/webapp/api/send-pdf/${book}/`, {
+          method: "POST",
+          headers: { "X-Telegram-Init-Data": initData },
+        });
+        sent = res.ok;
+      } catch (e) {}
+      btn.disabled = false;
+      btn.textContent = sent ? "✅ Botga yubordim" : "📥 PDF";
+      const abs = new URL(url, location.href).href;
+      const name = decodeURIComponent(abs.split("/").pop().split("?")[0]) || "book.pdf";
+      // downloadFile is Bot API 8.0+; older clients throw WebAppMethodUnsupported.
+      try {
+        tg.downloadFile({ url: abs, file_name: name }, () => {});
+      } catch (e) {
+        tg.openLink(abs);
+      }
     }
     async function showWords(book, unit) {
       loading(); setHeader(`Unit ${unit.number}`, book.title); setBack(() => showUnits(book));

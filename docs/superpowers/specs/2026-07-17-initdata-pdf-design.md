@@ -96,6 +96,24 @@ qabul qilgani uchun bu yerda shart.
 3. Telegram tashqarisida (brauzer, D ishidan keyin): bot chaqirilmaydi, tugma oddiy
    `<a download>` havolasi bo'lib qoladi.
 
+### A3 — CloudStorage boot'ni o'ldirishi (implementatsiya vaqtida topildi)
+
+Rejada yo'q edi; brauzerda haydab ko'rganda chiqdi va A2 ni to'sib turgani uchun kiritildi.
+
+`loadLearned` (`index.html`) initData bo'lmaganda `tg.CloudStorage.getItems()` ga tushadi.
+CloudStorage — Bot API 6.9+; eski klientlarda (va Telegram tashqarisidagi brauzerda, u yerda
+`tg.CloudStorage` obyekti mavjud, lekin versiya 6.0 deb hisoblanadi) u **sinxron
+`WebAppMethodUnsupported` tashlaydi**. Xato ushlanmaydi, `loadLearned` dan chiqib ketadi —
+va uning callback'i birinchi tab'ni render qiladigan yagona joy (`loadLearned(() => setTab(...))`,
+skript oxiri). Natija: **sahifa butunlay bo'sh**.
+
+Bu `main`da allaqachon mavjud (tasdiqlangan: HEAD template'i bilan ham bir xil bo'sh sahifa).
+A ga kiritildi, chunki A2 ning brauzer uchun `<a download>` yo'li bo'sh sahifada erishib
+bo'lmaydigan kod bo'lib qolardi, va D butunlay shu yo'lga tayanadi.
+
+Tuzatish: shox `inTelegram` bilan qo'riqlanadi va `try/catch` ichiga olinadi; ikkala holatda
+ham `loadLearnedLocal(done)` ga tushadi, ya'ni boot davom etadi.
+
 ## Nima o'zgarmaydi
 
 - `Book.telegram_file_id` cache sxemasi va `book_pdf` xizmati — qayta ishlatiladi.

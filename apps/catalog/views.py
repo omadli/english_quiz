@@ -1,11 +1,13 @@
 import datetime
 import json
+import logging
 
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from apps.accounts.models import TelegramAccount
 from apps.catalog.models import Book, Unit, Word
@@ -15,6 +17,8 @@ from apps.learning.models import DailySession, LearnedWord, LearningProfile
 from apps.learning.services.dashboard import build_dashboard
 from apps.relations.services.guardian import ward_profile
 from apps.relations.services.reports import guardian_wards
+
+logger = logging.getLogger(__name__)
 
 
 def _word_payload(w: Word, with_context: bool = False) -> dict:
@@ -344,6 +348,31 @@ def api_submit_exam(request):
     from apps.learning.services.exam_app import submit_exam
 
     return JsonResponse(submit_exam(session, answers))
+
+
+@csrf_exempt  # auth is the initData HMAC, not a session cookie
+@require_POST  # sending a DM is a side effect — never on GET
+def api_send_pdf(request, book_id: int):
+    """DM the book's PDF to the caller via the bot — the Mini App's PDF button.
+    Reuses the bot's file_id cache, so only the very first send uploads bytes."""
+    from apps.learning.services.book_pdf import get_sendable_book, save_file_id
+    from bot.sender import send_document
+
+    profile = _profile_from_request(request)
+    if profile is None:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    doc = get_sendable_book(book_id)
+    if doc is None:
+        return JsonResponse({"error": "not found"}, status=404)
+    filename, payload = doc
+    try:
+        file_id = send_document(profile.user.telegram.telegram_id, payload, filename)
+    except Exception as exc:  # blocked bot, Telegram outage — the page still offers download
+        logger.warning("failed to DM book pdf %s: %s", book_id, exc)
+        return JsonResponse({"ok": False}, status=502)
+    if not isinstance(payload, str):  # first upload — cache the file_id for next time
+        save_file_id(book_id, file_id)
+    return JsonResponse({"ok": True})
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
