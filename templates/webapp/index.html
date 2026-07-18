@@ -453,10 +453,20 @@
         return;
       }
       const done = status === "completed";
-      const exam = done
+      // Fetch today's + any makeup exam so we can offer both (best-effort).
+      let exams = [];
+      try { exams = (await apiExam()).exams || []; } catch (e) {}
+      const todayExam = exams.find((e) => e.kind === "today");
+      const makeupExam = exams.find((e) => e.kind === "makeup");
+      const examBtn = done
         ? `<div class="rounded-2xl bg-accent/10 border border-accent/30 text-accent font-semibold py-3 text-center text-sm">✅ Bugungi imtihon topshirildi</div>`
-        : (words.length >= 4
+        : (todayExam
           ? `<button id="t-exam" class="w-full rounded-2xl bg-accent text-accent-ink font-semibold py-3.5 active:scale-[.99] transition">🎯 Imtihon topshirish</button>` : "");
+      const makeupCard = makeupExam
+        ? `<button id="t-makeup" class="w-full rounded-2xl bg-amber-500/10 border border-amber-500/40 text-amber-300 font-semibold py-3.5 text-left px-4 active:scale-[.99] transition">
+             ⏳ Kechagi imtihon — <span class="hl">qarzdorlik</span>
+             <div class="text-[11px] font-normal text-muted mt-0.5">bugun topshirsangiz, kechangi kun hisobga olinadi (oxirgi imkoniyat)</div>
+           </button>` : "";
       setContent("px-4 py-4 pb-24 space-y-3",
         `<div class="rounded-2xl bg-card border border-line p-4 flex items-center justify-between gap-3">
            <div>
@@ -465,7 +475,7 @@
            </div>
            <button id="t-play" class="shrink-0 grid h-11 w-11 place-items-center rounded-full bg-accent text-accent-ink text-lg active:scale-90 transition" aria-label="Barcha so'zlarni tinglash">▶︎</button>
          </div>` +
-        exam + words.map(wordCard).join(""));
+        makeupCard + examBtn + words.map(wordCard).join(""));
       bindWordCards();
       document.getElementById("t-play").addEventListener("click", () => {
         try { speechSynthesis.cancel(); } catch (e) {}
@@ -475,30 +485,34 @@
           speechSynthesis.speak(u);
         });
       });
-      if (!done && words.length >= 4) {
-        document.getElementById("t-exam").addEventListener("click", () => showExam());
-      }
+      if (todayExam) document.getElementById("t-exam").addEventListener("click", () => showExam(todayExam));
+      if (makeupExam) document.getElementById("t-makeup").addEventListener("click", () => showExam(makeupExam));
     }
 
     // ---- Bo'limli imtihon: Test -> Yozish -> Tinglash -> Gapirish ----------
     async function apiExam() { return getJSON("api/exam/"); }
-    async function submitExam(answers) {
+    async function submitExam(sessionId, answers) {
       const res = await fetch("/webapp/api/exam/submit/", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": initData },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({ session_id: sessionId, answers }),
       });
       if (!res.ok) throw new Error(res.status);
       return res.json();
     }
     const EX_LABEL = { quiz: "Test", writing: "Yozish", listening: "Tinglash", speaking: "Gapirish" };
-    async function showExam() {
+    async function showExam(exam) {
       setHeader("Imtihon", "Bo'limli imtihon"); setBack(() => setTab("today")); loading();
-      let data;
-      try { data = await apiExam(); } catch (e) { return message("Imtihon hozircha ochilmadi."); }
+      if (!exam) {  // no exam handed in — fetch and default to today's (else the makeup)
+        let data;
+        try { data = await apiExam(); } catch (e) { return message("Imtihon hozircha ochilmadi."); }
+        exam = (data.exams || [])[0];
+      }
+      if (!exam) return message("Bugungi imtihon yo'q — so'zlar kelgach ochiladi. 🌅");
+      if (exam.kind === "makeup") setHeader("Kechagi imtihon", "Qarzdorlik — oxirgi imkoniyat");
       const queue = [];
-      (data.sections || []).forEach((s) => s.questions.forEach((q) => queue.push({ kind: s.kind, q })));
-      if (!queue.length) return message("Bugungi imtihon yo'q — so'zlar kelgach ochiladi. 🌅");
+      (exam.sections || []).forEach((s) => s.questions.forEach((q) => queue.push({ kind: s.kind, q })));
+      if (!queue.length) return message("Bu imtihonда savol yo'q.");
       const answers = [];
       let i = 0;
       function record(answer) {
@@ -509,7 +523,7 @@
       async function finish() {
         loading(); setBack(null);
         let r;
-        try { r = await submitExam(answers); } catch (e) { return message("Yuborishda xatolik. Qaytadan urining."); }
+        try { r = await submitExam(exam.session_id, answers); } catch (e) { return message("Yuborishda xatolik. Qaytadan urining."); }
         setContent("px-4 py-12 pb-24 text-center space-y-3",
           `<div class="text-6xl a-pop">🏁</div>
            <div class="text-3xl font-black tracking-tight">${r.score}<span class="text-muted text-xl">/${r.total}</span></div>

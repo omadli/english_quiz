@@ -308,36 +308,60 @@ def api_ward_settings(request, learner_id: int):
     return JsonResponse(_profile_payload(profile))
 
 
-def _today_session_for(profile):
+def _local_today(profile):
     from zoneinfo import ZoneInfo
 
-    today = timezone.now().astimezone(ZoneInfo(profile.timezone)).date()
-    return DailySession.objects.filter(user=profile.user, date=today).first()
+    return timezone.now().astimezone(ZoneInfo(profile.timezone)).date()
+
+
+def _exam_sessions(profile):
+    """(kind, session) for today's exam plus yesterday's makeup — both only if
+    still unfinished. Yesterday's is the missed-exam second chance: submitting it
+    marks that day COMPLETED, so the streak heals (finalize keys off session.date)."""
+    today = _local_today(profile)
+    yesterday = today - datetime.timedelta(days=1)
+    by_date = {
+        s.date: s
+        for s in DailySession.objects.filter(
+            user=profile.user, date__in=[today, yesterday]
+        ).exclude(status=DailySession.Status.COMPLETED)
+    }
+    out = []
+    if today in by_date:
+        out.append(("today", by_date[today]))
+    if yesterday in by_date:
+        out.append(("makeup", by_date[yesterday]))
+    return out
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
 def api_exam(request):
-    """Today's sectioned exam payload (Quiz/Writing/Listening/Speaking) for the Mini App."""
+    """Sectioned exams for the Mini App: today's + yesterday's makeup if unfinished."""
     profile = _profile_from_request(request)
     if profile is None:
         return JsonResponse({"error": "unauthorized"}, status=401)
-    session = _today_session_for(profile)
-    if session is None:
-        return JsonResponse({"sections": []})
     from apps.learning.services.exam_app import build_exam
 
-    return JsonResponse(build_exam(session, profile))
+    exams = []
+    for kind, session in _exam_sessions(profile):
+        payload = build_exam(session, profile)
+        if payload["sections"]:
+            exams.append({
+                "session_id": session.id,
+                "kind": kind,
+                "date": session.date.isoformat(),
+                "sections": payload["sections"],
+            })
+    return JsonResponse({"exams": exams})
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
 def api_submit_exam(request):
-    """Grade a completed Mini App exam server-side (SM-2 + finalize)."""
+    """Grade a Mini App exam server-side (SM-2 + finalize). `session_id` must be
+    the caller's own today-or-yesterday, still-unfinished session."""
     profile = _profile_from_request(request)
     if profile is None:
         return JsonResponse({"error": "unauthorized"}, status=401)
-    session = _today_session_for(profile)
-    if session is None:
-        return JsonResponse({"error": "no session"}, status=400)
     try:
         payload = json.loads(request.body or b"{}")
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -345,6 +369,18 @@ def api_submit_exam(request):
     answers = payload.get("answers") if isinstance(payload, dict) else None
     if not isinstance(answers, list):
         return JsonResponse({"error": "bad answers"}, status=400)
+    today = _local_today(profile)
+    session = (
+        DailySession.objects.filter(
+            id=payload.get("session_id"),
+            user=profile.user,
+            date__in=[today, today - datetime.timedelta(days=1)],
+        )
+        .exclude(status=DailySession.Status.COMPLETED)
+        .first()
+    )
+    if session is None:
+        return JsonResponse({"error": "no session"}, status=400)
     from apps.learning.services.exam_app import submit_exam
 
     return JsonResponse(submit_exam(session, answers))
