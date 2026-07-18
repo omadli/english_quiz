@@ -350,44 +350,6 @@ def api_submit_exam(request):
     return JsonResponse(submit_exam(session, answers))
 
 
-def api_auth_debug(request):
-    """TEMPORARY diagnostic — why is initData being rejected in prod?
-
-    Booleans only: no token, no signature, no user data leaves here. A caller who
-    cannot already produce a valid HMAC learns nothing they didn't know. Delete
-    once the Mini App auth issue is settled.
-    """
-    import time as _time
-
-    from aiogram.utils.web_app import check_webapp_signature
-    from django.conf import settings as dj_settings
-
-    from apps.common.webapp_auth import _SIGNATURE_RE
-
-    raw = request.headers.get("X-Telegram-Init-Data", "")
-    token = dj_settings.BOT_TOKEN
-    out = {
-        "token_configured": bool(token),
-        "token_bot_id": token.split(":")[0] if token else None,
-        "init_data_present": bool(raw),
-        "init_data_len": len(raw),
-        "fields": sorted(f.split("=")[0] for f in raw.split("&") if f),
-        "server_epoch": int(_time.time()),
-    }
-    if not raw or not token:
-        return JsonResponse(out)
-    cleaned = _SIGNATURE_RE.sub("", raw).lstrip("&")
-    out["hmac_ok_raw"] = check_webapp_signature(token, raw)
-    out["hmac_ok_stripped"] = check_webapp_signature(token, cleaned)
-    data = parse_init_data(raw)
-    out["parse_init_data_ok"] = data is not None
-    if data is not None:
-        out["user_id"] = data.user.id
-        out["age_seconds"] = int(_time.time() - data.auth_date.timestamp())
-        out["account_found"] = TelegramAccount.objects.filter(telegram_id=data.user.id).exists()
-    return JsonResponse(out)
-
-
 @csrf_exempt  # auth is the initData HMAC, not a session cookie
 @require_POST  # sending a DM is a side effect — never on GET
 def api_send_pdf(request, book_id: int):

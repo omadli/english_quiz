@@ -17,18 +17,21 @@ pytestmark = pytest.mark.django_db
 def _init_data(
     user: dict, auth_date: int | None = None, token: str = TOKEN, signature: str = "abc123"
 ) -> str:
-    """Build a signed Telegram WebApp initData string (mirrors the client).
-    Real clients send a `signature` field, which Telegram excludes from the
-    hashed check string — keep it here so we test what Telegram actually sends."""
+    """Build a signed Telegram WebApp initData string, mirroring a REAL client.
+
+    Telegram computes the hash over every field except `hash` — the `signature`
+    field INCLUDED (confirmed against a live tdesktop 9.6: hash validated only
+    with signature in the check string). So `signature` is added *before* the
+    hash is computed, exactly as Telegram's servers do."""
     fields = {
         "auth_date": str(auth_date if auth_date is not None else int(time.time())),
         "user": json.dumps(user, separators=(",", ":")),
     }
+    if signature:
+        fields["signature"] = signature
     dcs = "\n".join(f"{k}={fields[k]}" for k in sorted(fields))
     secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
     fields["hash"] = hmac.new(secret, dcs.encode(), hashlib.sha256).hexdigest()
-    if signature:
-        fields["signature"] = signature
     return urlencode(fields)
 
 
