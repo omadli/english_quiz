@@ -127,6 +127,23 @@
       } catch (e) {}
     }
 
+    // TEMPORARY boot diagnostic (?debug=1) — shows exactly what the real client
+    // sends, so a screenshot pins whether the Mini App auth failure is delivery,
+    // signature, account, or frontend. Runs before loadLearned so a boot hang
+    // can't hide it. Remove once diagnosed.
+    if (new URLSearchParams(location.search).get("debug") === "1") {
+      const b = document.createElement("div");
+      b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;font:11px/1.4 monospace;padding:6px;white-space:pre-wrap;word-break:break-all";
+      const info = "platform=" + (tg && tg.platform) + " ver=" + (tg && tg.version) +
+        " tgInit.len=" + ((tg && tg.initData) || "").length + " used.len=" + initData.length;
+      b.textContent = info + " | tekshirilmoqda…";
+      document.addEventListener("DOMContentLoaded", () => document.body.appendChild(b));
+      fetch("/webapp/api/authdebug/", initData ? { headers: { "X-Telegram-Init-Data": initData } } : {})
+        .then((r) => r.json())
+        .then((d) => { b.textContent = info + " | " + JSON.stringify(d); })
+        .catch((e) => { b.textContent = info + " | authdebug ERROR " + e; });
+    }
+
     const titleEl = document.getElementById("title");
     const subtitleEl = document.getElementById("subtitle");
     const contentEl = document.getElementById("content");
@@ -222,17 +239,23 @@
           .catch(() => { learned = new Set(); })
           .finally(() => done && done());
       } else if (inTelegram && tg.CloudStorage) {
-        // CloudStorage is Bot API 6.9+; on older clients getItems throws
-        // WebAppMethodUnsupported synchronously. Uncaught, that kills boot — the
-        // callback below is what renders the first tab — so fall through instead.
+        // CloudStorage is Bot API 6.9+. On older clients getItems either throws
+        // WebAppMethodUnsupported synchronously OR (worse) fires a postEvent the
+        // client silently ignores, so the callback never runs. Either way boot
+        // must not hang — its callback is the only thing that renders the first
+        // tab. Guard with try/catch AND a timeout that falls through.
         const keys = Array.from({ length: SHARDS }, (_, i) => "learned_" + i);
+        let settled = false;
+        const finish = (fn) => { if (settled) return; settled = true; fn(); };
+        const timer = setTimeout(() => finish(() => loadLearnedLocal(done)), 1500);
         try {
-          tg.CloudStorage.getItems(keys, (e, items) => {
+          tg.CloudStorage.getItems(keys, (e, items) => finish(() => {
+            clearTimeout(timer);
             learned = new Set();
             if (items) Object.values(items).forEach((v) => (v || "").split(",").filter(Boolean).forEach((x) => learned.add(x)));
             done && done();
-          });
-        } catch (e) { loadLearnedLocal(done); }
+          }));
+        } catch (e) { clearTimeout(timer); finish(() => loadLearnedLocal(done)); }
       } else {
         loadLearnedLocal(done);
       }
