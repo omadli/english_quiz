@@ -61,10 +61,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class LoginCode(TimeStampedModel):
-    """A short-lived one-time code DM'd to the user's Telegram for web login."""
+    """A web-login attempt keyed by a browser `nonce`. The browser creates the
+    row (user/code still blank), then the user opens t.me/bot?start=login_<nonce>
+    and the bot attaches their account + a one-time `code`, DM'd from the bot."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="login_codes")
-    code = models.CharField(max_length=6)
+    nonce = models.CharField(max_length=48, unique=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="login_codes", null=True, blank=True
+    )
+    code = models.CharField(max_length=6, blank=True)
     expires_at = models.DateTimeField()
     attempts = models.PositiveSmallIntegerField(default=0)
     used = models.BooleanField(default=False)

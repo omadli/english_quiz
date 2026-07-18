@@ -37,10 +37,10 @@
   <div class="card">
     <div class="logo">📖</div>
     <h1>Essential Words</h1>
-    <p class="sub">Telegram username'ingiz bilan kiring — <span class="hl">parol kerak emas</span></p>
+    <p class="sub">Telegram orqali kiring — <span class="hl">parol kerak emas</span></p>
     <div id="step-id">
-      <input id="ident" placeholder="@username" autocomplete="username" autocapitalize="off" autocorrect="off">
-      <button id="btn-code">Kod olish</button>
+      <p class="hint">Botga o'tib «Boshlash» tugmasini bosing — kod Telegram'ga yuboriladi</p>
+      <button id="btn-code">Telegram orqali kod olish →</button>
     </div>
     <div id="step-code" style="display:none">
       <p class="hint">Telegram'ga yuborilgan 6 xonali kodni kiriting</p>
@@ -67,33 +67,29 @@
         .then((r) => r.json()).then((d) => { if (d.ok) location.href = d.redirect; }).catch(() => {});
     }
 
+    let nonce = '';
     $('btn-code').addEventListener('click', async () => {
-      const identifier = $('ident').value.trim();
-      if (!identifier) return msg('Username kiriting', true);
-      $('btn-code').disabled = true; msg('Yuborilmoqda…');
-      const d = await api('/app/api/request-code/', { identifier });
+      $('btn-code').disabled = true; msg('Havola tayyorlanmoqda…');
+      const d = await api('/app/api/login-link/');
       $('btn-code').disabled = false;
       if (d.ok) {
+        nonce = d.nonce;
+        window.open(d.url, '_blank');  // opens the bot; user taps Start, gets the code
         $('step-id').style.display = 'none'; $('step-code').style.display = 'block'; $('code').focus();
-        msg("Kod Telegram'ga yuborildi ✅");
+        msg("Botga o'tib «Boshlash»ni bosing — kod shu yerga kelmaydi, Telegram'da ko'rinadi");
       } else {
-        msg({
-          not_found: "Topilmadi — botni /start qilganingizga va @username borligiga ishonch hosil qiling (yoki ilovani Telegram ichida oching).",
-          throttled: 'Kod yaqinda yuborilgan — biroz kuting.',
-          send_failed: "Yuborib bo'lmadi — avval botni /start qiling.",
-        }[d.error] || 'Xatolik yuz berdi', true);
+        msg(d.error === 'no_bot' ? 'Bot sozlanmagan — administrator bilan bog\'laning.' : 'Xatolik yuz berdi', true);
       }
     });
     $('btn-login').addEventListener('click', async () => {
-      const code = $('code').value.trim(), identifier = $('ident').value.trim();
+      const code = $('code').value.trim();
       if (code.length < 6) return msg('6 xonali kodni kiriting', true);
       $('btn-login').disabled = true; msg('Tekshirilmoqda…');
-      const d = await api('/app/api/verify-code/', { identifier, code });
+      const d = await api('/app/api/verify-code/', { nonce, code });
       $('btn-login').disabled = false;
       if (d.ok) location.href = d.redirect; else msg("Kod noto'g'ri yoki eskirgan", true);
     });
     $('btn-back').addEventListener('click', () => { $('step-code').style.display = 'none'; $('step-id').style.display = 'block'; msg(''); });
-    $('ident').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-code').click(); });
     $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-login').click(); });
   </script>
 </body>

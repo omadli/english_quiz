@@ -59,6 +59,28 @@ async def test_start_without_payload_does_not_redeem(mock_redeem):
     mock_redeem.assert_not_called()
 
 
+@patch("bot.handlers.start.load_quiz")
+@patch("bot.handlers.start.fulfill_login_request", return_value="654321")
+async def test_start_login_deeplink_dms_code_and_skips_onboarding(mock_fulfill, mock_load):
+    user = MagicMock()
+    message = AsyncMock()
+    await start_handler.cmd_start(
+        message, _state(), _cmd(args="login_NONCE123"), user=user, profile=MagicMock()
+    )
+    mock_fulfill.assert_called_once_with("NONCE123", user)
+    mock_load.assert_not_called()  # login_ is handled before quiz-code decoding
+    assert "654321" in message.answer.call_args.args[0]
+
+
+@patch("bot.handlers.start.fulfill_login_request", return_value=None)
+async def test_start_login_deeplink_expired(mock_fulfill):
+    message = AsyncMock()
+    await start_handler.cmd_start(
+        message, _state(), _cmd(args="login_STALE"), user=MagicMock(), profile=MagicMock()
+    )
+    message.answer.assert_awaited()  # sends the "expired" string, no crash
+
+
 _CFG = {"book_id": 1, "unit_ids": [10], "count": 15, "interval": 20, "types": ["en_uz"]}
 
 

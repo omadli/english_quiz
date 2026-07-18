@@ -8,6 +8,11 @@ WELCOME_NEW = (
 )
 WELCOME_BACK = "Xush kelibsiz! 👋✨ Quyidagi menyudan foydalaning 👇"
 LINKED_OK = "✅ Muvaffaqiyatli ulandingiz! Endi hisobotlarni olib turasiz."
+LOGIN_CODE = (
+    "🔐 Saytga kirish kodingiz: <b>{code}</b>\n\n"
+    "Kodni <b>english.omadli.uz</b> saytiga kiriting. 10 daqiqa amal qiladi — hech kimga bermang."
+)
+LOGIN_LINK_EXPIRED = "⌛️ Kirish havolasi eskirgan. Saytdan qaytadan «Kod olish» tugmasini bosing."
 WARD_JOINED = "👤 <b>{name}</b> siz bilan ({role}) ulandi. /wards orqali sozlang."
 ONBOARD_START_BTN = "🚀 Sozlashni boshlash"
 ONBOARD_DEFAULTS_BTN = "⚡ Standart bilan boshlash"

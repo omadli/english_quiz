@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
 from apps.accounts.models import User
+from apps.accounts.services.login import fulfill_login_request
 from apps.learning.models import LearningProfile, default_weekdays
 from apps.quiz.services.quiz_code import load_quiz
 from apps.relations.models import Guardianship
@@ -65,6 +66,12 @@ async def cmd_start(
 ) -> None:
     await state.clear()
     payload = command.args or ""
+    if payload.startswith("login_"):
+        code = await sync_to_async(fulfill_login_request)(payload[len("login_"):], user)
+        await message.answer(
+            strings.LOGIN_CODE.format(code=code) if code else strings.LOGIN_LINK_EXPIRED
+        )
+        return  # came in to log into the website — no onboarding
     if payload:
         config = await sync_to_async(load_quiz)(payload)  # decode the self-contained share code
         if config is not None:

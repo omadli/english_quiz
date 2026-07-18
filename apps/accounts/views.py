@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import TelegramAccount
-from apps.accounts.services.login import request_login_code, verify_login_code
+from apps.accounts.services.login import create_login_request, verify_login_request
 from apps.common.webapp_auth import parse_init_data
 
 _BACKEND = "django.contrib.auth.backends.ModelBackend"  # required: we bypass authenticate()
@@ -35,18 +35,20 @@ def _json_body(request) -> dict:
         return {}
 
 
-def api_request_code(request):
-    if request.method != "POST":
-        return JsonResponse({"ok": False}, status=405)
-    identifier = _json_body(request).get("identifier", "")
-    return JsonResponse(request_login_code(identifier))
+@require_POST
+def api_login_link(request):
+    """Start a login: mint a nonce and return the bot deep link to open."""
+    if not settings.BOT_USERNAME:
+        return JsonResponse({"ok": False, "error": "no_bot"}, status=503)
+    nonce = create_login_request()
+    url = f"https://t.me/{settings.BOT_USERNAME}?start=login_{nonce}"
+    return JsonResponse({"ok": True, "nonce": nonce, "url": url})
 
 
+@require_POST
 def api_verify_code(request):
-    if request.method != "POST":
-        return JsonResponse({"ok": False}, status=405)
     body = _json_body(request)
-    user = verify_login_code(body.get("identifier", ""), body.get("code", ""))
+    user = verify_login_request(body.get("nonce", ""), body.get("code", ""))
     if user is None:
         return JsonResponse({"ok": False, "error": "invalid"}, status=400)
     login(request, user, backend=_BACKEND)  # rotates the session key (anti-fixation)

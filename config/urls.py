@@ -14,7 +14,7 @@ urlpatterns = [
     path("logout/", accounts_views.logout_view, name="logout"),
     path("app/", accounts_views.dashboard, name="dashboard"),
     path("app/top/", accounts_views.leaderboard, name="leaderboard"),
-    path("app/api/request-code/", accounts_views.api_request_code, name="request_code"),
+    path("app/api/login-link/", accounts_views.api_login_link, name="login_link"),
     path("app/api/verify-code/", accounts_views.api_verify_code, name="verify_code"),
     path("app/api/session/", accounts_views.api_session_init, name="session_init"),
     # Telegram Mini App (word browser) + its JSON data endpoints
