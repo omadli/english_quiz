@@ -23,7 +23,10 @@ def build_report(session: DailySession) -> str:
         daily_session=session, chosen_option__isnull=True
     ).count()
 
-    lines = ["🏁 <b>Imtihon yakunlandi!</b>", f"Ball: <b>{correct}/{total}</b>"]
+    header = "🏁 <b>Imtihon yakunlandi!</b>"
+    if session.completed_late:
+        header = "⏳ <b>Kechagi imtihon topshirildi</b> (qarzdorlik yopildi)"
+    lines = [header, f"Ball: <b>{correct}/{total}</b>"]
     if wrong_words:
         lines.append("🔁 Takrorlang: " + ", ".join(wrong_words))
     if unanswered:

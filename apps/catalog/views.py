@@ -383,7 +383,13 @@ def api_submit_exam(request):
         return JsonResponse({"error": "no session"}, status=400)
     from apps.learning.services.exam_app import submit_exam
 
-    return JsonResponse(submit_exam(session, answers))
+    is_late = session.date < today  # a makeup: submitted after its own day
+    if is_late:  # set before submit so the report (sent inside finalize) can show it
+        session.completed_late = True
+        session.save(update_fields=["completed_late", "updated_at"])
+    result = submit_exam(session, answers)
+    result["late"] = is_late
+    return JsonResponse(result)
 
 
 @csrf_exempt  # auth is the initData HMAC, not a session cookie

@@ -92,9 +92,10 @@ def test_exam_submit_scores_by_session_id(client, settings):
         content_type="application/json", HTTP_X_TELEGRAM_INIT_DATA=_init(42),
     )
     assert r.status_code == 200
-    assert r.json() == {"score": 1, "total": 2}
+    assert r.json() == {"score": 1, "total": 2, "late": False}
     session.refresh_from_db()
     assert session.status == DailySession.Status.COMPLETED
+    assert session.completed_late is False
 
 
 def test_submit_makeup_completes_yesterday(client, settings):
@@ -109,8 +110,10 @@ def test_submit_makeup_completes_yesterday(client, settings):
         content_type="application/json", HTTP_X_TELEGRAM_INIT_DATA=_init(42),
     )
     assert r.status_code == 200
+    assert r.json()["late"] is True  # flagged as a late/makeup completion
     session.refresh_from_db()
     assert session.status == DailySession.Status.COMPLETED  # the missed day heals
+    assert session.completed_late is True
 
 
 def test_submit_rejects_foreign_session(client, settings):

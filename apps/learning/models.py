@@ -75,6 +75,8 @@ class DailySession(TimeStampedModel):
     completed_at = models.DateTimeField(null=True, blank=True)
     score = models.PositiveSmallIntegerField(null=True, blank=True)
     total = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Completed a day late via the next-day makeup (submitted after its own date).
+    completed_late = models.BooleanField(default=False)
     study_nudged = models.BooleanField(default=False)
     pre_exam_nudged = models.BooleanField(default=False)
     # exam reminder stage: 0 none · 1 pre · 2 prompt · 3 post

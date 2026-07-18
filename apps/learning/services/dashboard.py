@@ -63,6 +63,7 @@ def build_dashboard(user, days: int = 30) -> dict:
             "status": s.status if s else "none",
             "score": s.score if s else None,
             "total": s.total if s else None,
+            "late": bool(s and s.completed_late),
         })
         completed = s is not None and s.status == DailySession.Status.COMPLETED
         if (

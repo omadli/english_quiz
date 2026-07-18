@@ -296,6 +296,7 @@
     }
     async function showBooks() {
       loading(); setHeader("Kitoblar", "4000 Essential Words"); setBack(null);
+      searchbarEl.style.display = "";  // restore search when returning from the reader
       const list = await books();
       if (!list.length) return message("Hozircha kitob yo'q.");
       setContent("px-4 py-4 pb-24 grid grid-cols-3 gap-3", list.map(bookCard).join(""));
@@ -323,6 +324,7 @@
     }
     async function showUnits(book) {
       loading(); setHeader(book.title, "O'quv sayohati"); setBack(showBooks);
+      searchbarEl.style.display = "none";  // search belongs to the books grid only
       const { units } = await getJSON(`api/units/${book.id}/`);
       const total = units.length;
       const isDone = (u) => u.word_count > 0 && (u.learned || 0) >= u.word_count;
@@ -390,10 +392,16 @@
     const READER_PER_PAGE = 5;
     async function showWords(book, unit) {
       loading(); setHeader(`Unit ${unit.number}`, book.title); setBack(() => showUnits(book));
+      searchbarEl.style.display = "none";  // reader is its own view — no unit-level search
       const { words } = await getJSON(`api/words/${unit.id}/`);
       if (!words.length) return message("So'z topilmadi.");
       const pages = Math.ceil(words.length / READER_PER_PAGE);
       let page = 0;
+      const go = (d) => {
+        const np = Math.min(pages - 1, Math.max(0, page + d));
+        if (np === page) return;
+        page = np; renderPage(); contentEl.scrollIntoView({ block: "start" });
+      };
       function renderPage() {
         const slice = words.slice(page * READER_PER_PAGE, (page + 1) * READER_PER_PAGE);
         const disPrev = page === 0, disNext = page === pages - 1;
@@ -406,11 +414,17 @@
         setContent("px-4 py-4 pb-24 space-y-3", slice.map(wordCard).join("") + nav);
         bindWordCards();
         setHeader(`Unit ${unit.number}`, pages > 1 ? `${book.title} · ${page + 1}/${pages}-sahifa` : book.title);
-        const go = (d) => { page = Math.min(pages - 1, Math.max(0, page + d)); renderPage(); contentEl.scrollIntoView({ block: "start" }); };
         const p = document.getElementById("pg-prev"), n = document.getElementById("pg-next");
         if (p && !disPrev) p.addEventListener("click", () => go(-1));
         if (n && !disNext) n.addEventListener("click", () => go(1));
       }
+      // Swipe left/right to flip pages (natural in the Telegram in-app browser).
+      let sx = 0, sy = 0;
+      contentEl.addEventListener("touchstart", (e) => { sx = e.changedTouches[0].clientX; sy = e.changedTouches[0].clientY; }, { passive: true });
+      contentEl.addEventListener("touchend", (e) => {
+        const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) go(dx < 0 ? 1 : -1);
+      }, { passive: true });
       renderPage();
     }
 
@@ -548,9 +562,12 @@
         loading(); setBack(null);
         let r;
         try { r = await submitExam(exam.session_id, answers); } catch (e) { return message("Yuborishda xatolik. Qaytadan urining."); }
+        const lateNote = r.late
+          ? `<p class="text-sm text-amber-300 font-semibold">⏳ Kechagi qarzdorlik yopildi — o'sha kun hisobga olindi.</p>` : "";
         setContent("px-4 py-12 pb-24 text-center space-y-3",
-          `<div class="text-6xl a-pop">🏁</div>
+          `<div class="text-6xl a-pop">${r.late ? "⏳" : "🏁"}</div>
            <div class="text-3xl font-black tracking-tight">${r.score}<span class="text-muted text-xl">/${r.total}</span></div>
+           ${lateNote}
            <p class="text-sm text-muted">Imtihon yakunlandi — to'liq natija botga yuborildi.</p>
            <button id="ex-done" class="mt-3 rounded-2xl bg-accent text-accent-ink font-semibold px-7 py-3 active:scale-95 transition">Yopish</button>`);
         document.getElementById("ex-done").addEventListener("click", () => setTab("today"));
