@@ -127,21 +127,31 @@
       } catch (e) {}
     }
 
-    // TEMPORARY boot diagnostic (?debug=1) — shows exactly what the real client
-    // sends, so a screenshot pins whether the Mini App auth failure is delivery,
-    // signature, account, or frontend. Runs before loadLearned so a boot hang
-    // can't hide it. Remove once diagnosed.
-    if (new URLSearchParams(location.search).get("debug") === "1") {
+    // TEMPORARY boot diagnostic — shows exactly what the real client sends, so a
+    // screenshot pins whether the Mini App auth failure is delivery, signature,
+    // account or frontend. Runs before loadLearned so a boot hang can't hide it.
+    // Auto-shows inside Telegram (no ?debug needed — the web_app button controls
+    // the URL); a green OK banner self-hides, red stays for the screenshot.
+    // Force with ?debug=1 anywhere. Remove once diagnosed.
+    if (inTelegram || new URLSearchParams(location.search).get("debug") === "1") {
       const b = document.createElement("div");
-      b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;font:11px/1.4 monospace;padding:6px;white-space:pre-wrap;word-break:break-all";
       const info = "platform=" + (tg && tg.platform) + " ver=" + (tg && tg.version) +
         " tgInit.len=" + ((tg && tg.initData) || "").length + " used.len=" + initData.length;
-      b.textContent = info + " | tekshirilmoqda…";
+      const paint = (bg, txt) => {
+        b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:" + bg +
+          ";color:#fff;font:11px/1.4 monospace;padding:6px;white-space:pre-wrap;word-break:break-all";
+        b.textContent = txt;
+      };
+      paint("#b45309", info + " | tekshirilmoqda…");
       document.addEventListener("DOMContentLoaded", () => document.body.appendChild(b));
       fetch("/webapp/api/authdebug/", initData ? { headers: { "X-Telegram-Init-Data": initData } } : {})
         .then((r) => r.json())
-        .then((d) => { b.textContent = info + " | " + JSON.stringify(d); })
-        .catch((e) => { b.textContent = info + " | authdebug ERROR " + e; });
+        .then((d) => {
+          const ok = d.account_found === true;
+          paint(ok ? "#166534" : "#b91c1c", info + " | " + JSON.stringify(d));
+          if (ok) setTimeout(() => b.remove(), 2500);  // all good — get out of the way
+        })
+        .catch((e) => paint("#b91c1c", info + " | authdebug ERROR " + e));
     }
 
     const titleEl = document.getElementById("title");
