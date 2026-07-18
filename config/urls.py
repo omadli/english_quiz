@@ -17,8 +17,10 @@ urlpatterns = [
     path("app/api/login-link/", accounts_views.api_login_link, name="login_link"),
     path("app/api/verify-code/", accounts_views.api_verify_code, name="verify_code"),
     path("app/api/session/", accounts_views.api_session_init, name="session_init"),
-    # Telegram Mini App (word browser) + its JSON data endpoints
+    # Telegram Mini App (word browser) + its JSON data endpoints. The same page
+    # is public at /kitoblar/ for logged-out web visitors (books/units/words/reader).
     path("webapp/", catalog_views.webapp_index, name="webapp"),
+    path("kitoblar/", catalog_views.webapp_index, name="books_public"),
     path("webapp/api/books/", catalog_views.api_books, name="webapp_books"),
     path("webapp/api/units/<int:book_id>/", catalog_views.api_units, name="webapp_units"),
     path("webapp/api/words/<int:unit_id>/", catalog_views.api_words, name="webapp_words"),
